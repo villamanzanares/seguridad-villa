@@ -6,13 +6,37 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+let serviceAccount = null;
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+try {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    console.error("ENV no definida");
+  } else {
+    console.log("ENV detectada");
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  }
+} catch (error) {
+  console.error("Error parseando JSON:", error);
+}
+
+if (serviceAccount) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+  console.log("Firebase inicializado");
+} else {
+  console.log("Firebase NO inicializado");
+}
+
+app.get("/", (req, res) => {
+  res.send("Servidor activo 🚀");
 });
 
 app.post("/api/alerta", async (req, res) => {
+  if (!admin.apps.length) {
+    return res.status(500).json({ error: "Firebase no inicializado" });
+  }
+
   const { token } = req.body;
 
   const message = {
@@ -33,4 +57,4 @@ app.post("/api/alerta", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Servidor corriendo"));
+app.listen(PORT, () => console.log("Servidor corriendo en puerto", PORT));
