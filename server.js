@@ -4,6 +4,7 @@ import admin from 'firebase-admin';
 
 const app = express();
 app.use(express.json());
+app.use(express.static('.'));
 
 // Inicializar Firebase usando variable de entorno
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -40,5 +41,6 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
 });
+
 
 
