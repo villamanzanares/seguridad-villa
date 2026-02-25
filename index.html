@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rosko Producciones – Emergencia</title>
+
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #f4f4f4;
+      font-family: Arial, sans-serif;
+    }
+
+    #boton {
+      padding: 20px 40px;
+      font-size: 1.5rem;
+      background: #e63946;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    #boton:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+
+<body>
+
+  <button id="boton" onclick="enviarAlerta()">EMERGENCIA</button>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+      authDomain: "alerta-rosko.firebaseapp.com",
+      projectId: "alerta-rosko",
+      storageBucket: "alerta-rosko.firebasestorage.app",
+      messagingSenderId: "1022811358317",
+      appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
+
+    async function solicitarPermiso() {
+      const permiso = await Notification.requestPermission();
+      if (permiso === "granted") {
+        obtenerToken();
+      } else {
+        alert("Necesitamos permiso para enviar notificaciones.");
+      }
+    }
+
+    function obtenerToken() {
+      messaging.getToken({
+        vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
+      }).then(token => {
+        if (token) {
+          console.log("Token del dispositivo:", token);
+          localStorage.setItem("fcm_token", token);
+        }
+      }).catch(err => {
+        console.error("Error obteniendo token:", err);
+      });
+    }
+
+    async function enviarAlerta() {
+      const token = localStorage.getItem("fcm_token");
+
+      if (!token) {
+        alert("Aún no tienes token. Recarga la página y acepta notificaciones.");
+        return;
+      }
+
+      alert("¡Alerta enviada! 🚨");
+
+      try {
+        await fetch("https://alertas-rosko.onrender.com/emergencia", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            usuario: "Juan",
+            ubicacion: "Santiago",
+            token: token
+          })
+        });
+
+      } catch (error) {
+        console.error("Error enviando alerta:", error);
+      }
+    }
+
+    window.onload = solicitarPermiso;
+  </script>
+
+</body>
+</html>
