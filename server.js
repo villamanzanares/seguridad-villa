@@ -1,13 +1,12 @@
-// server.js
 import express from 'express';
 import admin from 'firebase-admin';
 
 const app = express();
 
 app.use(express.json());
-app.use(express.static('.')); // Sirve index.html y service worker
+app.use(express.static('.'));
 
-// Inicializar Firebase usando variable de entorno
+// Inicializar Firebase
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
@@ -16,45 +15,55 @@ admin.initializeApp({
 
 console.log("Firebase inicializado ✅");
 
-// Endpoint para alertas
+// 🔥 Endpoint Emergencia Global
 app.post('/emergencia', async (req, res) => {
   try {
     const db = admin.firestore();
-
     const { usuario, ubicacion, token } = req.body;
 
     const data = {
       usuario: usuario || 'test',
       ubicacion: ubicacion || 'Santiago',
-      token: token || null,
       timestamp: admin.firestore.FieldValue.serverTimestamp()
     };
 
-    // Guardar en Firestore
+    // 1️⃣ Guardar alerta
     await db.collection('alertas').add(data);
 
-    // 🔥 Enviar notificación push si hay token
+    // 2️⃣ Guardar token si existe y no está repetido
     if (token) {
-      await admin.messaging().send({
-        token: token,
+      const tokenRef = db.collection('tokens').doc(token);
+      const doc = await tokenRef.get();
+      if (!doc.exists) {
+        await tokenRef.set({ createdAt: admin.firestore.FieldValue.serverTimestamp() });
+        console.log("Nuevo token guardado ✅");
+      }
+    }
+
+    // 3️⃣ Obtener TODOS los tokens registrados
+    const snapshot = await db.collection('tokens').get();
+    const tokens = snapshot.docs.map(doc => doc.id);
+
+    if (tokens.length > 0) {
+      await admin.messaging().sendEachForMulticast({
+        tokens: tokens,
         notification: {
           title: "🚨 Emergencia activada",
           body: `Ubicación: ${data.ubicacion}`
         }
       });
 
-      console.log("Notificación enviada correctamente ✅");
+      console.log(`Notificación enviada a ${tokens.length} dispositivos 🔥`);
     }
 
     res.status(200).send({ ok: true });
 
   } catch (error) {
-    console.error("Error enviando notificación:", error);
+    console.error("Error:", error);
     res.status(500).send({ ok: false, error: error.message });
   }
 });
 
-// Servidor
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
