@@ -8,9 +8,12 @@ app.use(express.json());
 // Inicializar Firebase usando variable de entorno
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
+// 🔥 ESTA LÍNEA ARREGLA EL ERROR PEM
+serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://alerta-rosko-default-rtdb.firebaseio.com" // reemplaza con tu URL
+  databaseURL: "https://alerta-rosko-default-rtdb.firebaseio.com"
 });
 
 console.log("Firebase inicializado ✅");
@@ -37,4 +40,5 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
 });
+
 
