@@ -1,20 +1,21 @@
-const express = require('express');
-const admin = require('firebase-admin');
-const app = express();
+// server.js
+import express from 'express';
+import admin from 'firebase-admin';
 
+const app = express();
 app.use(express.json());
 
-// Inicializar Firebase con la variable de entorno
+// Inicializar Firebase usando variable de entorno
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://alerta-rosko-default-rtdb.firebaseio.com" // reemplaza con tu URL de Firebase
+  databaseURL: "https://alerta-rosko-default-rtdb.firebaseio.com" // reemplaza con tu URL
 });
 
 console.log("Firebase inicializado ✅");
 
-// Endpoint de prueba para alertas
+// Endpoint para alertas
 app.post('/emergencia', async (req, res) => {
   try {
     const data = {
