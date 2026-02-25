@@ -53,12 +53,25 @@
     firebase.initializeApp(firebaseConfig);
     const messaging = firebase.messaging();
 
+    // 🔥 Registrar Service Worker manualmente
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then(function(registration) {
+          console.log('Service Worker registrado correctamente:', registration);
+        })
+        .catch(function(error) {
+          console.error('Error registrando Service Worker:', error);
+        });
+    }
+
     async function solicitarPermiso() {
       const permiso = await Notification.requestPermission();
+
       if (permiso === "granted") {
+        console.log("Permiso concedido");
         obtenerToken();
       } else {
-        alert("Necesitamos permiso para enviar notificaciones.");
+        alert("Debes permitir notificaciones para usar el sistema.");
       }
     }
 
@@ -69,6 +82,8 @@
         if (token) {
           console.log("Token del dispositivo:", token);
           localStorage.setItem("fcm_token", token);
+        } else {
+          console.log("No se pudo obtener token.");
         }
       }).catch(err => {
         console.error("Error obteniendo token:", err);
@@ -102,6 +117,7 @@
     }
 
     window.onload = solicitarPermiso;
+
   </script>
 
 </body>
