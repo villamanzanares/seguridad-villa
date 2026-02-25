@@ -16,14 +16,14 @@
     }
 
     #boton {
-      padding: 20px 40px;
-      font-size: 1.5rem;
+      padding: 25px 50px;
+      font-size: 1.8rem;
       background: #e63946;
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       cursor: pointer;
-      transition: 0.2s ease;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
     }
 
     #boton:hover {
@@ -33,10 +33,8 @@
 </head>
 
 <body>
+  <button id="boton" onclick="enviarAlerta()">🚨 EMERGENCIA</button>
 
-  <button id="boton" onclick="enviarAlerta()">EMERGENCIA</button>
-
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 
@@ -51,41 +49,38 @@
     };
 
     firebase.initializeApp(firebaseConfig);
+
     const messaging = firebase.messaging();
 
-    // 🔥 Registrar Service Worker manualmente
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then(function(registration) {
-          console.log('Service Worker registrado correctamente:', registration);
-        })
-        .catch(function(error) {
-          console.error('Error registrando Service Worker:', error);
-        });
-    }
+    // Registrar Service Worker
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      .then((registration) => {
+        console.log("Service Worker registrado correctamente:", registration);
+        messaging.useServiceWorker(registration);
+      })
+      .catch((err) => {
+        console.error("Error registrando Service Worker:", err);
+      });
 
     async function solicitarPermiso() {
       const permiso = await Notification.requestPermission();
-
       if (permiso === "granted") {
         console.log("Permiso concedido");
         obtenerToken();
       } else {
-        alert("Debes permitir notificaciones para usar el sistema.");
+        alert("Debes permitir notificaciones.");
       }
     }
 
     function obtenerToken() {
       messaging.getToken({
         vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
-      }).then(token => {
+      }).then((token) => {
         if (token) {
           console.log("Token del dispositivo:", token);
           localStorage.setItem("fcm_token", token);
-        } else {
-          console.log("No se pudo obtener token.");
         }
-      }).catch(err => {
+      }).catch((err) => {
         console.error("Error obteniendo token:", err);
       });
     }
@@ -98,27 +93,23 @@
         return;
       }
 
-      alert("¡Alerta enviada! 🚨");
-
       try {
         await fetch("https://alertas-rosko.onrender.com/emergencia", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            usuario: "Juan",
-            ubicacion: "Santiago",
-            token: token
-          })
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ token })
         });
 
+        alert("🚨 ALERTA ENVIADA");
       } catch (error) {
         console.error("Error enviando alerta:", error);
+        alert("Error enviando alerta");
       }
     }
 
     window.onload = solicitarPermiso;
-
   </script>
-
 </body>
 </html>
