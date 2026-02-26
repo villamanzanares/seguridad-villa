@@ -3,33 +3,103 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>App de Alertas Vecinales</title>
+<title>Alertas Vecinales - App</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style>
-body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f6fa; display:flex; justify-content:center; align-items:flex-start; height:100vh; }
-.container { display:flex; flex-direction:row; width:90%; max-width:1000px; margin-top:40px; gap:20px; }
-.left-panel { flex:1; display:flex; flex-direction:column; align-items:center; gap:20px; }
-.btn-emergencia { background:#e74c3c; color:white; font-size:2rem; font-weight:bold; border:none; border-radius:20px; padding:30px 60px; cursor:pointer; transition:0.2s all; }
-.btn-emergencia:hover { background:#c0392b; transform:scale(1.05); }
-.btn-group { display:flex; flex-direction:column; gap:15px; width:80%; }
-.btn-group button { padding:15px; font-size:1rem; border-radius:10px; border:none; cursor:pointer; transition:0.2s all; color:white; }
-#btnCarabineros { background:#2980b9; }
-#btnSeguridad { background:#27ae60; }
-#btnEstado { background:#95a5a6; }
-.right-panel { flex:1; background:#fff; border-radius:15px; box-shadow:0px 5px 15px rgba(0,0,0,0.1); padding:20px; max-height:600px; overflow-y:auto; }
-.alert { background:#f1c40f; color:#2c3e50; padding:12px; border-radius:10px; margin-bottom:10px; transition:0.2s all; }
-.alert.new { background:#e74c3c; color:white; animation:flash 1s; }
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #f0f2f5;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100vh;
+}
+.app-container {
+  display: flex;
+  flex-direction: row;
+  width: 95%;
+  max-width: 1000px;
+  margin-top: 30px;
+  gap: 20px;
+}
+.left-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 25px;
+}
+.btn-main {
+  background: #e74c3c;
+  color: white;
+  font-size: 2rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 25px;
+  padding: 35px 60px;
+  cursor: pointer;
+  transition: 0.2s all;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.btn-main:hover { background: #c0392b; transform: scale(1.05); }
+.btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 80%;
+}
+.btn-group button {
+  padding: 20px;
+  font-size: 1.2rem;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s all;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#btnCarabineros { background: #2980b9; }
+#btnSeguridad { background: #27ae60; }
+#btnEstado { background: #95a5a6; }
+.right-panel {
+  flex: 1;
+  background: #fff;
+  border-radius: 25px;
+  box-shadow: 0px 8px 20px rgba(0,0,0,0.12);
+  padding: 20px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+.alert {
+  background: #f1c40f;
+  color: #2c3e50;
+  padding: 15px;
+  border-radius: 15px;
+  margin-bottom: 12px;
+  transition: 0.2s all;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.alert.new { background: #e74c3c; color:white; animation:flash 1s; }
 @keyframes flash { 0%{transform:scale(1);}50%{transform:scale(1.05);}100%{transform:scale(1);} }
-h2 { margin-top:0; font-size:1.5rem; text-align:center; }
+h2 { margin-top:0; font-size:1.6rem; text-align:center; color:#34495e; }
 </style>
 </head>
 <body>
-<div class="container">
+<div class="app-container">
   <div class="left-panel">
-    <button class="btn-emergencia" id="btnEmergencia">🚨 EMERGENCIA</button>
+    <button class="btn-main" id="btnEmergencia"><i class="fas fa-bell"></i>EMERGENCIA</button>
     <div class="btn-group">
-      <button id="btnCarabineros">Carabineros</button>
-      <button id="btnSeguridad">Seguridad Ciudadana</button>
-      <button id="btnEstado">Estado</button>
+      <button id="btnCarabineros"><i class="fas fa-shield-alt"></i> Carabineros</button>
+      <button id="btnSeguridad"><i class="fas fa-user-shield"></i> Seguridad Ciudadana</button>
+      <button id="btnEstado"><i class="fas fa-info-circle"></i> Estado</button>
     </div>
   </div>
   <div class="right-panel">
@@ -44,11 +114,11 @@ const alertContainer = document.getElementById('alertContainer');
 // Usuario de ejemplo
 const usuarioEjemplo = { nombre: "Juan", casa: "12", ubicacion: { lat:-33.45, lng:-70.65 } };
 
-// Función para mostrar alerta en panel derecho
+// Función para mostrar alerta
 function addAlert(text, isNew=false) {
   const div = document.createElement('div');
   div.className = 'alert' + (isNew ? ' new' : '');
-  div.textContent = text;
+  div.innerHTML = text;
   alertContainer.prepend(div);
 }
 
@@ -61,7 +131,7 @@ async function enviarAlerta(tipo) {
       body: JSON.stringify({ usuario: usuarioEjemplo, token: null, tipo })
     });
     const data = await response.json();
-    if(data.success) addAlert(`✅ ${tipo} enviada`);
+    if(data.success) addAlert(`✅ ${tipo} enviada`, tipo==='🚨 EMERGENCIA');
     else addAlert(`❌ Error enviando ${tipo}: ${data.error}`);
   } catch(err){
     addAlert(`❌ Error enviando ${tipo}: ${err.message}`);
