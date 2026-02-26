@@ -3,132 +3,151 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alertas Vecinales</title>
+<title>Alertas Villa</title>
 <style>
+  /* Reset rápido */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
-    margin: 0;
-    padding: 0;
-    background: #e0e0e0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
     font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
   }
 
-  /* Mockup tipo teléfono con espacio amplio */
+  /* Mockup del teléfono */
   .phone-mockup {
-    background: white;
-    border: 14px solid #111;
-    border-radius: 40px;
-    width: 360px;
+    width: 320px;
     max-width: 90vw;
-    padding: 40px 20px 60px 20px; /* más espacio arriba y abajo */
-    box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+    background: #fff;
+    border-radius: 36px;
+    border: 4px solid #000;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    padding: 20px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
   }
 
-  /* Header y Footer */
-  .header {
+  header {
     height: 100px;
-    width: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
+    font-size: 1.3em;
     font-weight: bold;
-    font-size: 1.4em;
-    margin-bottom: 20px;
   }
 
-  .footer {
-    height: 220px;
-    width: 100%;
-    margin-top: 20px;
-    background: #f5f5f5;
-    border-radius: 12px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 1em;
-    color: #333;
-  }
-
-  .app-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-  }
-
-  .btn {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    color: white;
-    cursor: pointer;
+  /* Botones */
+  .btn-main {
+    background: #d32f2f;
+    color: #fff;
     border: none;
-    outline: none;
-    user-select: none;
-  }
-
-  /* Botón EMERGENCIA */
-  .btn-emergencia {
-    background: #e53935;
     height: 130px;
     width: 100%;
-    border-radius: 12px 12px 0 0;
-    margin-bottom: 6px;
-    font-size: 1.3em;
-    text-align: center;
+    border-radius: 12px 12px 0 0; /* puntas superiores redondeadas */
+    font-size: 1.4em;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    margin-bottom: 4px;
   }
 
-  /* Segunda fila */
   .row-middle {
     display: flex;
     justify-content: space-between;
-    width: 100%;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   .btn-square {
     background: #3949ab;
+    color: #fff;
+    border: none;
     height: 90px;
     width: 48%;
     border-radius: 0;
     font-size: 1em;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
   }
 
-  /* Tercera fila */
-  .btn-estado {
-    background: #00897b;
-    height: 70px;
+  .btn-bottom {
+    background: #00796b;
+    color: #fff;
+    border: none;
+    height: 90px;
     width: 100%;
-    border-radius: 0 0 12px 12px;
+    border-radius: 0 0 12px 12px; /* puntas inferiores redondeadas */
     font-size: 1em;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
   }
 
-  /* Hover */
-  .btn:hover {
-    opacity: 0.85;
+  footer {
+    height: 120px;
   }
-
 </style>
 </head>
 <body>
   <div class="phone-mockup">
-    <div class="header">🏘️ Villa Ejemplo</div>
-    <div class="app-container">
-      <button class="btn btn-emergencia">🚨 EMERGENCIA</button>
-      <div class="row-middle">
-        <button class="btn btn-square">CARABINEROS</button>
-        <button class="btn btn-square">SEGURIDAD CIUDADANA</button>
-      </div>
-      <button class="btn btn-estado">ESTADO</button>
+    <header>Villa Segura</header>
+
+    <!-- Botón EMERGENCIA -->
+    <button class="btn-main" id="btn-emergencia">🚨 EMERGENCIA</button>
+
+    <!-- Segunda fila -->
+    <div class="row-middle">
+      <button class="btn-square" id="btn-carabineros">Carabineros</button>
+      <button class="btn-square" id="btn-seguridad">Seguridad Ciudadana</button>
     </div>
-    <div class="footer">📍 Ubicación | 🔔 Notificaciones</div>
+
+    <!-- Botón ESTADO -->
+    <button class="btn-bottom" id="btn-estado">Estado</button>
+
+    <footer></footer>
   </div>
+
+<script>
+  const baseUrl = "https://alertas-rosko.onrender.com/emergencia";
+
+  async function enviarAlerta(tipo) {
+    const usuario = {
+      nombre: "Juan Pérez",
+      casa: "123",
+      ubicacion: { lat: -33.45, lng: -70.66 }
+    };
+
+    try {
+      const res = await fetch(baseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuario, tipo })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert(`✅ ${tipo} enviada correctamente`);
+      } else {
+        alert(`❌ Error enviando ${tipo}: ${data.error}`);
+      }
+    } catch (err) {
+      alert(`❌ Error enviando ${tipo}: ${err}`);
+    }
+  }
+
+  document.getElementById("btn-emergencia").addEventListener("click", () => enviarAlerta("EMERGENCIA"));
+  document.getElementById("btn-carabineros").addEventListener("click", () => enviarAlerta("CARABINEROS"));
+  document.getElementById("btn-seguridad").addEventListener("click", () => enviarAlerta("SEGURIDAD CIUDADANA"));
+  document.getElementById("btn-estado").addEventListener("click", () => enviarAlerta("ESTADO"));
+</script>
 </body>
 </html>
