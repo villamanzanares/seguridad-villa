@@ -125,7 +125,7 @@ function addAlert(text, isNew=false) {
 // Función para enviar alerta al backend
 async function enviarAlerta(tipo) {
   try {
-    const response = await fetch('https://TU_BACKEND.onrender.com/emergencia', {
+    const response = await fetch('https://alertas-rosko.onrender.com/emergencia', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ usuario: usuarioEjemplo, token: null, tipo })
@@ -146,3 +146,4 @@ document.getElementById('btnEstado').addEventListener('click', ()=>addAlert('ℹ
 </script>
 </body>
 </html>
+
