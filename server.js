@@ -13,6 +13,10 @@ if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
 let serviceAccount;
 try {
   serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+
+  // 🔹 Reemplaza los "\n" por saltos de línea reales en la private key
+  serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+
 } catch (err) {
   console.error("❌ ERROR: No se pudo parsear FIREBASE_SERVICE_ACCOUNT_JSON:", err);
   process.exit(1);
