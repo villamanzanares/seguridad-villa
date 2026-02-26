@@ -130,9 +130,14 @@
     const badge = document.getElementById("badge");
     let contador = 0;
 
-    // -------------------------------
+    // Datos del usuario (pueden venir de sesión o formulario)
+    const usuario = {
+      nombre: "Juan García",
+      casa: "123",
+      ubicacion: { lat: -33.45, lng: -70.65 } // GPS real
+    };
+
     // Registrar token en backend
-    // -------------------------------
     async function registrarToken() {
       try {
         const token = await getToken(messaging, { vapidKey: "TU_VAPID_KEY" });
@@ -148,17 +153,13 @@
     }
     registrarToken();
 
-    // -------------------------------
     // Escuchar notificaciones push
-    // -------------------------------
     onMessage(messaging, (payload) => {
       console.log("Mensaje recibido:", payload);
       agregarAlerta(payload.notification.body);
     });
 
-    // -------------------------------
     // Escuchar alertas en Firestore
-    // -------------------------------
     const q = query(collection(db, "alertas"), orderBy("timestamp", "desc"));
     onSnapshot(q, (snapshot) => {
       alertasContainer.innerHTML = "";
@@ -168,9 +169,6 @@
       });
     });
 
-    // -------------------------------
-    // Función para agregar alerta a UI
-    // -------------------------------
     function agregarAlerta(mensaje, id=null, incrementar=true) {
       const div = document.createElement("div");
       div.classList.add("alerta");
@@ -186,30 +184,24 @@
       }
     }
 
-    // -------------------------------
-    // Borrar alerta individual
-    // -------------------------------
     async function eliminarAlerta(id) {
       try { await deleteDoc(doc(db, "alertas", id)); }
       catch (err) { console.error("Error borrando alerta:", err); }
     }
 
-    // -------------------------------
     // Botón de emergencia
-    // -------------------------------
     document.getElementById("btnEmergencia").addEventListener("click", async () => {
       try {
         await fetch("https://TU_BACKEND.onrender.com/emergencia", {
           method: "POST",
-          headers: { "Content-Type": "application/json" }
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario })
         });
         console.log("Alerta enviada al backend");
       } catch (err) { console.error("Error enviando alerta:", err); }
     });
 
-    // -------------------------------
     // Botón borrar todas las alertas
-    // -------------------------------
     const btnBorrarTodo = document.getElementById("btnBorrarTodo");
     btnBorrarTodo.addEventListener("click", async () => {
       if (!confirm("¿Seguro quieres borrar todas las alertas?")) return;
