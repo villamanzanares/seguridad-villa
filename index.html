@@ -81,6 +81,20 @@
     }
 
     @keyframes fadeIn { to { opacity: 1; } }
+
+    #btnBorrarTodo {
+      margin-top: 20px;
+      padding: 12px 24px;
+      font-size: 18px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      background-color: #5555ff;
+      color: #fff;
+      box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+    #btnBorrarTodo:hover { transform: scale(1.05); }
   </style>
 </head>
 <body>
@@ -90,13 +104,14 @@
     <div id="badge">0</div>
   </button>
 
+  <button id="btnBorrarTodo">🗑️ Borrar todas las alertas</button>
+
   <div id="alertas"></div>
 
-  <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js";
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-messaging.js";
-    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "TU_API_KEY",
@@ -190,6 +205,30 @@
         });
         console.log("Alerta enviada al backend");
       } catch (err) { console.error("Error enviando alerta:", err); }
+    });
+
+    // -------------------------------
+    // Botón borrar todas las alertas
+    // -------------------------------
+    const btnBorrarTodo = document.getElementById("btnBorrarTodo");
+    btnBorrarTodo.addEventListener("click", async () => {
+      if (!confirm("¿Seguro quieres borrar todas las alertas?")) return;
+
+      try {
+        const querySnapshot = await getDocs(collection(db, "alertas"));
+        const borrados = [];
+        querySnapshot.forEach((docSnap) => {
+          borrados.push(deleteDoc(doc(db, "alertas", docSnap.id)));
+        });
+        await Promise.all(borrados);
+
+        alertasContainer.innerHTML = "";
+        contador = 0;
+        badge.textContent = contador;
+        console.log("✅ Todas las alertas borradas");
+      } catch (err) {
+        console.error("❌ Error borrando alertas:", err);
+      }
     });
   </script>
 </body>
