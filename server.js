@@ -3,8 +3,22 @@ import cors from "cors";
 import admin from "firebase-admin";
 import bodyParser from "body-parser";
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+// Validación de la variable de entorno
+if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+  console.error("❌ ERROR: La variable FIREBASE_SERVICE_ACCOUNT_JSON no está definida.");
+  process.exit(1); // Termina el proceso si no está configurada
+}
 
+// Parse seguro del JSON del service account
+let serviceAccount;
+try {
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+} catch (err) {
+  console.error("❌ ERROR: No se pudo parsear FIREBASE_SERVICE_ACCOUNT_JSON:", err);
+  process.exit(1);
+}
+
+// Inicializar Firebase Admin
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
@@ -17,6 +31,7 @@ const PORT = process.env.PORT || 8080;
 
 let tokensRegistrados = [];
 
+// Registrar token en backend
 app.post("/registrar-token", (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ error: "Token no proporcionado" });
@@ -27,8 +42,13 @@ app.post("/registrar-token", (req, res) => {
   return res.status(200).json({ success: true });
 });
 
+// Enviar alerta de emergencia
 app.post("/emergencia", async (req, res) => {
   const { usuario, token } = req.body;
+
+  if (!usuario || !usuario.nombre || !usuario.casa || !usuario.ubicacion) {
+    return res.status(400).json({ error: "Datos incompletos del usuario" });
+  }
 
   const mensajeTexto = `🚨 Emergencia!\nUsuario: ${usuario.nombre}\nCasa: ${usuario.casa}\nUbicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
 
