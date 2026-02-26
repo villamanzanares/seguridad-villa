@@ -3,113 +3,165 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rosko Producciones – Emergencia</title>
-
+  <title>Botón de Emergencia</title>
   <style>
     body {
+      font-family: Arial, sans-serif;
+      background-color: #1e1e2f;
+      color: #fff;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      background: #f4f4f4;
-      font-family: Arial, sans-serif;
+      margin: 0;
+      flex-direction: column;
     }
 
-    #boton {
-      padding: 25px 50px;
-      font-size: 1.8rem;
-      background: #e63946;
-      color: white;
+    /* Botón de emergencia */
+    #btnEmergencia {
+      position: relative;
+      background: #ff3b3b;
       border: none;
-      border-radius: 12px;
+      color: #fff;
+      padding: 20px 40px;
+      font-size: 24px;
+      border-radius: 16px;
       cursor: pointer;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
     }
 
-    #boton:hover {
+    #btnEmergencia:hover {
       transform: scale(1.05);
+    }
+
+    /* Badge contador */
+    #badge {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background: #ffd500;
+      color: #000;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      font-size: 16px;
+      animation: pop 0.3s;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0); }
+      70% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    /* Lista de alertas */
+    #alertas {
+      margin-top: 40px;
+      width: 300px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .alerta {
+      background: #2e2e3e;
+      border-left: 5px solid #ff3b3b;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      opacity: 0;
+      animation: fadeIn 0.5s forwards;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
     }
   </style>
 </head>
-
 <body>
-  <button id="boton" onclick="enviarAlerta()">🚨 EMERGENCIA</button>
 
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+  <button id="btnEmergencia">
+    🚨 Emergencia
+    <div id="badge">0</div>
+  </button>
 
-  <script>
+  <div id="alertas"></div>
+
+  <!-- Firebase App + Messaging -->
+  <script type="module">
+    // Importar Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-messaging.js";
+
     const firebaseConfig = {
-      apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-      authDomain: "alerta-rosko.firebaseapp.com",
-      projectId: "alerta-rosko",
-      storageBucket: "alerta-rosko.firebasestorage.app",
-      messagingSenderId: "1022811358317",
-      appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_PROJECT_ID.firebaseapp.com",
+      projectId: "TU_PROJECT_ID",
+      storageBucket: "TU_PROJECT_ID.appspot.com",
+      messagingSenderId: "TU_SENDER_ID",
+      appId: "TU_APP_ID",
     };
 
-    firebase.initializeApp(firebaseConfig);
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
 
-    const messaging = firebase.messaging();
-
-    // Registrar Service Worker
-    navigator.serviceWorker.register('/firebase-messaging-sw.js')
-      .then((registration) => {
-        console.log("Service Worker registrado correctamente:", registration);
-        messaging.useServiceWorker(registration);
-      })
-      .catch((err) => {
-        console.error("Error registrando Service Worker:", err);
-      });
-
-    async function solicitarPermiso() {
-      const permiso = await Notification.requestPermission();
-      if (permiso === "granted") {
-        console.log("Permiso concedido");
-        obtenerToken();
-      } else {
-        alert("Debes permitir notificaciones.");
-      }
-    }
-
-    function obtenerToken() {
-      messaging.getToken({
-        vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
-      }).then((token) => {
-        if (token) {
-          console.log("Token del dispositivo:", token);
-          localStorage.setItem("fcm_token", token);
-        }
-      }).catch((err) => {
-        console.error("Error obteniendo token:", err);
-      });
-    }
-
-    async function enviarAlerta() {
-      const token = localStorage.getItem("fcm_token");
-
-      if (!token) {
-        alert("Aún no tienes token. Recarga la página y acepta notificaciones.");
-        return;
-      }
-
+    // -------------------------------
+    // Registrar token automáticamente
+    // -------------------------------
+    async function registrarToken() {
       try {
-        await fetch("https://alertas-rosko.onrender.com/emergencia", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ token })
-        });
-
-        alert("🚨 ALERTA ENVIADA");
-      } catch (error) {
-        console.error("Error enviando alerta:", error);
-        alert("Error enviando alerta");
+        const token = await getToken(messaging, { vapidKey: "TU_VAPID_KEY" });
+        if (token) {
+          console.log("Token registrado:", token);
+          await fetch("https://TU_BACKEND.onrender.com/registrar-token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token })
+          });
+        }
+      } catch (err) {
+        console.error("Error registrando token:", err);
       }
     }
+    registrarToken();
 
-    window.onload = solicitarPermiso;
+    // -------------------------------
+    // Escuchar mensajes entrantes
+    // -------------------------------
+    const alertasContainer = document.getElementById("alertas");
+    const badge = document.getElementById("badge");
+    let contador = 0;
+
+    onMessage(messaging, (payload) => {
+      console.log("Mensaje recibido:", payload);
+      contador++;
+      badge.textContent = contador;
+
+      const alertaDiv = document.createElement("div");
+      alertaDiv.classList.add("alerta");
+      alertaDiv.textContent = payload.notification.body;
+      alertasContainer.prepend(alertaDiv);
+    });
+
+    // -------------------------------
+    // Botón de emergencia
+    // -------------------------------
+    const btn = document.getElementById("btnEmergencia");
+    btn.addEventListener("click", async () => {
+      try {
+        await fetch("https://TU_BACKEND.onrender.com/emergencia", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        console.log("Alerta enviada al backend");
+      } catch (err) {
+        console.error("Error enviando alerta:", err);
+      }
+    });
   </script>
 </body>
 </html>
