@@ -3,21 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Botón de Emergencia</title>
+  <title>Alerta Emergencia PRO</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #1e1e2f;
+      background-color: #121226;
       color: #fff;
       display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
       flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 30px;
+      min-height: 100vh;
     }
 
-    /* Botón de emergencia */
     #btnEmergencia {
       position: relative;
       background: #ff3b3b;
@@ -30,12 +29,8 @@
       box-shadow: 0 8px 15px rgba(0,0,0,0.3);
       transition: transform 0.2s;
     }
+    #btnEmergencia:hover { transform: scale(1.05); }
 
-    #btnEmergencia:hover {
-      transform: scale(1.05);
-    }
-
-    /* Badge contador */
     #badge {
       position: absolute;
       top: -10px;
@@ -52,34 +47,40 @@
       font-size: 16px;
       animation: pop 0.3s;
     }
+    @keyframes pop { 0% {transform: scale(0);} 70% {transform: scale(1.2);} 100% {transform: scale(1);} }
 
-    @keyframes pop {
-      0% { transform: scale(0); }
-      70% { transform: scale(1.2); }
-      100% { transform: scale(1); }
-    }
-
-    /* Lista de alertas */
     #alertas {
-      margin-top: 40px;
-      width: 300px;
-      max-height: 400px;
+      margin-top: 30px;
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 500px;
       overflow-y: auto;
     }
 
     .alerta {
-      background: #2e2e3e;
+      background: #1e1e2f;
       border-left: 5px solid #ff3b3b;
-      padding: 10px;
-      margin-bottom: 10px;
+      padding: 12px;
       border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       opacity: 0;
       animation: fadeIn 0.5s forwards;
     }
 
-    @keyframes fadeIn {
-      to { opacity: 1; }
+    .alerta button {
+      background: transparent;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 18px;
     }
+
+    @keyframes fadeIn { to { opacity: 1; } }
   </style>
 </head>
 <body>
@@ -91,11 +92,11 @@
 
   <div id="alertas"></div>
 
-  <!-- Firebase App + Messaging -->
+  <!-- Firebase -->
   <script type="module">
-    // Importar Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js";
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-messaging.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "TU_API_KEY",
@@ -108,9 +109,14 @@
 
     const app = initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
+    const db = getFirestore(app);
+
+    const alertasContainer = document.getElementById("alertas");
+    const badge = document.getElementById("badge");
+    let contador = 0;
 
     // -------------------------------
-    // Registrar token automáticamente
+    // Registrar token en backend
     // -------------------------------
     async function registrarToken() {
       try {
@@ -123,44 +129,67 @@
             body: JSON.stringify({ token })
           });
         }
-      } catch (err) {
-        console.error("Error registrando token:", err);
-      }
+      } catch (err) { console.error("Error registrando token:", err); }
     }
     registrarToken();
 
     // -------------------------------
-    // Escuchar mensajes entrantes
+    // Escuchar notificaciones push
     // -------------------------------
-    const alertasContainer = document.getElementById("alertas");
-    const badge = document.getElementById("badge");
-    let contador = 0;
-
     onMessage(messaging, (payload) => {
       console.log("Mensaje recibido:", payload);
-      contador++;
-      badge.textContent = contador;
-
-      const alertaDiv = document.createElement("div");
-      alertaDiv.classList.add("alerta");
-      alertaDiv.textContent = payload.notification.body;
-      alertasContainer.prepend(alertaDiv);
+      agregarAlerta(payload.notification.body);
     });
+
+    // -------------------------------
+    // Escuchar alertas en Firestore
+    // -------------------------------
+    const q = query(collection(db, "alertas"), orderBy("timestamp", "desc"));
+    onSnapshot(q, (snapshot) => {
+      alertasContainer.innerHTML = "";
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        agregarAlerta(data.mensaje, docSnap.id, false);
+      });
+    });
+
+    // -------------------------------
+    // Función para agregar alerta a UI
+    // -------------------------------
+    function agregarAlerta(mensaje, id=null, incrementar=true) {
+      const div = document.createElement("div");
+      div.classList.add("alerta");
+      div.innerHTML = `<span>${mensaje}</span><button>&times;</button>`;
+      alertasContainer.prepend(div);
+
+      const btnBorrar = div.querySelector("button");
+      if (id) btnBorrar.addEventListener("click", () => eliminarAlerta(id));
+
+      if (incrementar) {
+        contador++;
+        badge.textContent = contador;
+      }
+    }
+
+    // -------------------------------
+    // Borrar alerta individual
+    // -------------------------------
+    async function eliminarAlerta(id) {
+      try { await deleteDoc(doc(db, "alertas", id)); }
+      catch (err) { console.error("Error borrando alerta:", err); }
+    }
 
     // -------------------------------
     // Botón de emergencia
     // -------------------------------
-    const btn = document.getElementById("btnEmergencia");
-    btn.addEventListener("click", async () => {
+    document.getElementById("btnEmergencia").addEventListener("click", async () => {
       try {
         await fetch("https://TU_BACKEND.onrender.com/emergencia", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" }
         });
         console.log("Alerta enviada al backend");
-      } catch (err) {
-        console.error("Error enviando alerta:", err);
-      }
+      } catch (err) { console.error("Error enviando alerta:", err); }
     });
   </script>
 </body>
