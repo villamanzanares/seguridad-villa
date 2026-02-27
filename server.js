@@ -2,11 +2,17 @@ import express from "express";
 import cors from "cors";
 import admin from "firebase-admin";
 import bodyParser from "body-parser";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Necesario para usar __dirname con ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Validación de la variable de entorno
 if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
   console.error("❌ ERROR: La variable FIREBASE_SERVICE_ACCOUNT_JSON no está definida.");
-  process.exit(1); // Termina el proceso si no está configurada
+  process.exit(1);
 }
 
 // Parse seguro del JSON del service account
@@ -14,7 +20,7 @@ let serviceAccount;
 try {
   serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
-  // 🔹 Reemplaza los "\n" por saltos de línea reales en la private key
+  // Reemplaza los "\n" por saltos de línea reales en la private key
   serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
 
 } catch (err) {
@@ -28,8 +34,13 @@ admin.initializeApp({
 });
 
 const app = express();
+
 app.use(cors());
 app.use(bodyParser.json());
+
+// 🔥 ESTA ES LA PARTE QUE FALTABA
+// Sirve los archivos estáticos desde /public
+app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 8080;
 
@@ -54,7 +65,10 @@ app.post("/emergencia", async (req, res) => {
     return res.status(400).json({ error: "Datos incompletos del usuario" });
   }
 
-  const mensajeTexto = `🚨 Emergencia!\nUsuario: ${usuario.nombre}\nCasa: ${usuario.casa}\nUbicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
+  const mensajeTexto = `🚨 Emergencia!
+Usuario: ${usuario.nombre}
+Casa: ${usuario.casa}
+Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
 
   const message = {
     notification: { title: "🚨 Emergencia", body: mensajeTexto },
