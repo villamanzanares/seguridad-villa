@@ -79,8 +79,8 @@ Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
   }
 });
 
-// 🔹 NUEVO ENDPOINT: /alerta
-app.post("/alerta", (req, res) => {
+// 🔹 Endpoint /alerta que envía notificaciones a todos los tokens registrados
+app.post("/alerta", async (req, res) => {
   const { titulo, mensaje, nivel, fecha } = req.body;
 
   if (!titulo || !mensaje) {
@@ -89,9 +89,23 @@ app.post("/alerta", (req, res) => {
 
   console.log("📢 Alerta recibida:", { titulo, mensaje, nivel, fecha });
 
-  // Aquí podrías enviar notificación con Firebase si quieres
-  // Por ahora solo respondemos OK
-  return res.status(200).json({ status: "ok", mensaje: "Alerta recibida" });
+  if (tokensRegistrados.length === 0) {
+    return res.status(200).json({ status: "ok", mensaje: "Alerta recibida, pero no hay tokens registrados" });
+  }
+
+  const message = {
+    notification: { title: `🚨 ${titulo}`, body: mensaje },
+    tokens: tokensRegistrados
+  };
+
+  try {
+    const response = await admin.messaging().sendMulticast(message);
+    console.log("✅ Notificación enviada a tokens registrados:", response);
+    return res.status(200).json({ status: "ok", mensaje: "Alerta enviada a todos los dispositivos" });
+  } catch (error) {
+    console.error("❌ Error enviando notificación:", error);
+    return res.status(500).json({ status: "error", error: error.message });
+  }
 });
 
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
