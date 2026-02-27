@@ -19,10 +19,7 @@ if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
 let serviceAccount;
 try {
   serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-
-  // Reemplaza los "\n" por saltos de línea reales en la private key
   serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
-
 } catch (err) {
   console.error("❌ ERROR: No se pudo parsear FIREBASE_SERVICE_ACCOUNT_JSON:", err);
   process.exit(1);
@@ -37,9 +34,6 @@ const app = express();
 
 app.use(cors());
 app.use(bodyParser.json());
-
-// 🔥 ESTA ES LA PARTE QUE FALTABA
-// Sirve los archivos estáticos desde /public
 app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 8080;
@@ -83,6 +77,21 @@ Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
     console.error("❌ Error enviando notificación:", error);
     return res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// 🔹 NUEVO ENDPOINT: /alerta
+app.post("/alerta", (req, res) => {
+  const { titulo, mensaje, nivel, fecha } = req.body;
+
+  if (!titulo || !mensaje) {
+    return res.status(400).json({ error: "Faltan campos: titulo o mensaje" });
+  }
+
+  console.log("📢 Alerta recibida:", { titulo, mensaje, nivel, fecha });
+
+  // Aquí podrías enviar notificación con Firebase si quieres
+  // Por ahora solo respondemos OK
+  return res.status(200).json({ status: "ok", mensaje: "Alerta recibida" });
 });
 
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
