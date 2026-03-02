@@ -9,7 +9,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Validación de la variable de entorno
+// Validar variable de entorno
 if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
   console.error("❌ ERROR: La variable FIREBASE_SERVICE_ACCOUNT_JSON no está definida.");
   process.exit(1);
@@ -31,14 +31,13 @@ admin.initializeApp({
 });
 
 const app = express();
-
 app.use(cors());
 app.use(bodyParser.json());
 
-// Servir archivos estáticos de public
+// 🔥 Servir archivos estáticos desde public
 app.use(express.static(path.join(__dirname, "public")));
 
-// 🔹 Redirigir la raíz "/" a index.html
+// 🔹 Forzar la raíz a index.html de public
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -66,10 +65,6 @@ app.post("/emergencia", async (req, res) => {
     return res.status(400).json({ error: "Datos incompletos del usuario" });
   }
 
-  if (tokensRegistrados.length === 0) {
-    return res.status(200).json({ success: false, error: "No hay dispositivos registrados" });
-  }
-
   const mensajeTexto = `🚨 Emergencia!
 Usuario: ${usuario.nombre}
 Casa: ${usuario.casa}
@@ -79,6 +74,10 @@ Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
     notification: { title: "🚨 Emergencia", body: mensajeTexto },
     tokens: token ? [token] : tokensRegistrados
   };
+
+  if (message.tokens.length === 0) {
+    return res.status(200).json({ success: false, error: "No hay dispositivos registrados" });
+  }
 
   try {
     const response = await admin.messaging().sendMulticast(message);
@@ -90,7 +89,7 @@ Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
   }
 });
 
-// Endpoint /alerta que envía notificaciones a todos los tokens registrados
+// 🔹 Endpoint /alerta para enviar a todos los tokens
 app.post("/alerta", async (req, res) => {
   const { titulo, mensaje, nivel, fecha } = req.body;
 
