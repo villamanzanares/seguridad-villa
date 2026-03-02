@@ -48,7 +48,7 @@
   // 🌟 Registrar token automáticamente al entrar
   async function registrarToken() {
     try {
-      const currentToken = await getToken(messaging, { vapidKey: "TU_PUBLIC_VAPID_KEY" });
+      const currentToken = await getToken(messaging, { vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw" });
       if (currentToken) {
         console.log("✅ Token generado:", currentToken);
         const res = await fetch(baseUrl + "/registrar-token", {
