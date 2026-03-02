@@ -1,7 +1,9 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const admin = require("firebase-admin");
+import express from "express";
+import cors from "cors";
+import admin from "firebase-admin";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 app.use(cors());
@@ -10,15 +12,23 @@ app.use(express.json());
 // 🔐 Inicializar Firebase Admin
 if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
   console.log("❌ ENV no definida");
-} else {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-
-  console.log("✅ Firebase inicializado correctamente");
+  process.exit(1);
 }
+
+let serviceAccount;
+
+try {
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} catch (error) {
+  console.log("❌ Error parseando FIREBASE_SERVICE_ACCOUNT:", error);
+  process.exit(1);
+}
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+console.log("✅ Firebase inicializado correctamente");
 
 const db = admin.firestore();
 
@@ -63,13 +73,7 @@ app.post("/validar-villa", async (req, res) => {
 // 👤 REGISTRAR USUARIO
 // ======================================================
 app.post("/registrar-usuario", async (req, res) => {
-  const {
-    nombre,
-    email,
-    numeroCasa,
-    tipoUsuario,
-    codigoVilla,
-  } = req.body;
+  const { nombre, email, numeroCasa, tipoUsuario, codigoVilla } = req.body;
 
   if (!nombre || !numeroCasa || !codigoVilla) {
     return res.status(400).json({
@@ -158,7 +162,6 @@ app.post("/emergencia", async (req, res) => {
 
     const usuario = usuarioSnap.data();
 
-    // 🔎 Buscar usuarios activos de la misma villa
     const usuariosSnap = await db
       .collection("usuarios")
       .where("codigoVilla", "==", usuario.codigoVilla)
@@ -179,7 +182,6 @@ app.post("/emergencia", async (req, res) => {
       });
     }
 
-    // 💾 Guardar alerta en colección alertas
     await db.collection("alertas").add({
       idUsuario,
       nombre: usuario.nombre,
