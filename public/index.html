@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Alertas Villa</title>
+
+  <!-- Favicon vacío para evitar 404 -->
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -88,9 +92,7 @@
       cursor: pointer;
     }
 
-    footer {
-      height: 120px;
-    }
+    footer { height: 120px; }
   </style>
 </head>
 <body>
@@ -111,10 +113,10 @@
 
   <!-- Firebase App -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-app.js";
-    import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.6.1/firebase-messaging.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
 
-    // 🔹 Tu configuración de Firebase
+    // 🔹 Configuración Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
       authDomain: "alerta-rosko.firebaseapp.com",
@@ -127,15 +129,15 @@
     const app = initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
 
-    // 🔹 Registrar Service Worker
     let fcmToken = null;
+
+    // 🔹 Registrar Service Worker y generar token
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/firebase-messaging-sw.js')
         .then(registration => {
           console.log("✅ Service Worker registrado", registration);
-
           return getToken(messaging, {
-            vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+            vapidKey: "TU_PUBLIC_VAPID_KEY",
             serviceWorkerRegistration: registration
           });
         })
