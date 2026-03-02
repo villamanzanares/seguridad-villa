@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import cors from "cors";
 import admin from "firebase-admin";
@@ -15,11 +16,10 @@ if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
   process.exit(1);
 }
 
-// Parsear JSON de service account
+// Parsear JSON del service account
 let serviceAccount;
 try {
   serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-  // reemplazar saltos de línea escapados en la private_key
   serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
 } catch (err) {
   console.error("❌ ERROR: No se pudo parsear FIREBASE_SERVICE_ACCOUNT_JSON:", err);
@@ -35,14 +35,16 @@ const app = express();
 
 app.use(cors());
 app.use(bodyParser.json());
+
+// Servir carpeta public
 app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 8080;
 
-// Array para almacenar tokens registrados
+// Array para guardar tokens
 let tokensRegistrados = [];
 
-// 🔹 Registrar token
+// Registrar token
 app.post("/registrar-token", (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ error: "Token no proporcionado" });
@@ -53,7 +55,7 @@ app.post("/registrar-token", (req, res) => {
   return res.status(200).json({ success: true });
 });
 
-// 🔹 Enviar alerta de emergencia
+// Enviar alerta de emergencia
 app.post("/emergencia", async (req, res) => {
   const { usuario, token } = req.body;
 
@@ -62,13 +64,10 @@ app.post("/emergencia", async (req, res) => {
   }
 
   if (tokensRegistrados.length === 0 && !token) {
-    return res.status(400).json({ error: "No hay dispositivos registrados" });
+    return res.status(400).json({ error: "tokens must be a non-empty array" });
   }
 
-  const mensajeTexto = `🚨 Emergencia!
-Usuario: ${usuario.nombre}
-Casa: ${usuario.casa}
-Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
+  const mensajeTexto = `🚨 Emergencia!\nUsuario: ${usuario.nombre}\nCasa: ${usuario.casa}\nUbicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
 
   const message = {
     notification: { title: "🚨 Emergencia", body: mensajeTexto },
@@ -85,7 +84,7 @@ Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
   }
 });
 
-// 🔹 Endpoint /alerta que envía notificaciones a todos los tokens registrados
+// Endpoint /alerta para notificaciones generales
 app.post("/alerta", async (req, res) => {
   const { titulo, mensaje, nivel, fecha } = req.body;
 
@@ -114,5 +113,9 @@ app.post("/alerta", async (req, res) => {
   }
 });
 
-// Servir la app
+// Servir index.html por defecto
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
