@@ -10,13 +10,13 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Validar variable de entorno
+// Validación de la variable de entorno
 if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
   console.error("❌ ERROR: La variable FIREBASE_SERVICE_ACCOUNT_JSON no está definida.");
   process.exit(1);
 }
 
-// Parsear JSON del service account
+// Parse seguro del JSON del service account
 let serviceAccount;
 try {
   serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
@@ -35,16 +35,16 @@ const app = express();
 
 app.use(cors());
 app.use(bodyParser.json());
-
-// Servir carpeta public
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"))); // sirve todo dentro de /public
 
 const PORT = process.env.PORT || 8080;
 
-// Array para guardar tokens
+// Array para guardar tokens de dispositivos
 let tokensRegistrados = [];
 
-// Registrar token
+// ----------------------------
+// Registro de token desde el front
+// ----------------------------
 app.post("/registrar-token", (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ error: "Token no proporcionado" });
@@ -55,23 +55,28 @@ app.post("/registrar-token", (req, res) => {
   return res.status(200).json({ success: true });
 });
 
-// Enviar alerta de emergencia
+// ----------------------------
+// Enviar alerta de EMERGENCIA
+// ----------------------------
 app.post("/emergencia", async (req, res) => {
-  const { usuario, token } = req.body;
+  const { usuario } = req.body;
 
   if (!usuario || !usuario.nombre || !usuario.casa || !usuario.ubicacion) {
     return res.status(400).json({ error: "Datos incompletos del usuario" });
   }
 
-  if (tokensRegistrados.length === 0 && !token) {
-    return res.status(400).json({ error: "tokens must be a non-empty array" });
+  if (tokensRegistrados.length === 0) {
+    return res.status(400).json({ error: "No hay dispositivos registrados" });
   }
 
-  const mensajeTexto = `🚨 Emergencia!\nUsuario: ${usuario.nombre}\nCasa: ${usuario.casa}\nUbicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
+  const mensajeTexto = `🚨 Emergencia!
+Usuario: ${usuario.nombre}
+Casa: ${usuario.casa}
+Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
 
   const message = {
     notification: { title: "🚨 Emergencia", body: mensajeTexto },
-    tokens: token ? [token] : tokensRegistrados
+    tokens: tokensRegistrados
   };
 
   try {
@@ -84,7 +89,9 @@ app.post("/emergencia", async (req, res) => {
   }
 });
 
+// ----------------------------
 // Endpoint /alerta para notificaciones generales
+// ----------------------------
 app.post("/alerta", async (req, res) => {
   const { titulo, mensaje, nivel, fecha } = req.body;
 
@@ -113,7 +120,9 @@ app.post("/alerta", async (req, res) => {
   }
 });
 
+// ----------------------------
 // Servir index.html por defecto
+// ----------------------------
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
