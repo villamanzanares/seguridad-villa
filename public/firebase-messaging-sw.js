@@ -1,24 +1,31 @@
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+// firebase-messaging-sw.js
 
-firebase.initializeApp({
-  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js');
+
+// Configuración de Firebase (igual que en index.html)
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
   authDomain: "alerta-rosko.firebaseapp.com",
   projectId: "alerta-rosko",
-  storageBucket: "alerta-rosko.firebasestorage.app",
-  messagingSenderId: "1022811358317",
-  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-});
+  storageBucket: "alerta-rosko.appspot.com",
+  messagingSenderId: "118396150726725931815",
+  appId: "TU_APP_ID"
+};
 
+firebase.initializeApp(firebaseConfig);
+
+// Inicializar Firebase Messaging
 const messaging = firebase.messaging();
 
+// Manejar notificaciones en segundo plano
 messaging.onBackgroundMessage(function(payload) {
-  console.log('[firebase-messaging-sw.js] Mensaje recibido en background:', payload);
+  console.log('[firebase-messaging-sw.js] Notificación recibida en segundo plano:', payload);
 
-  const notificationTitle = payload.notification?.title || "🚨 Alerta";
+  const notificationTitle = payload.notification.title || "🚨 Alerta";
   const notificationOptions = {
-    body: payload.notification?.body || "Nueva emergencia activada",
-    icon: '/icon.png'
+    body: payload.notification.body || "",
+    icon: "/icono.png" // puedes cambiarlo por un ícono propio
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
