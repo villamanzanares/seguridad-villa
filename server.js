@@ -5,18 +5,21 @@ import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 
+// =============================
+// CONFIGURACIÓN BASE
+// =============================
+
 // Necesario para usar __dirname con ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// =============================
-// 🔐 VALIDACIÓN FIREBASE
-// =============================
+// Validar variable de entorno
 if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-  console.error("❌ ERROR: FIREBASE_SERVICE_ACCOUNT_JSON no está definida.");
+  console.error("❌ ERROR: FIREBASE_SERVICE_ACCOUNT_JSON no definida.");
   process.exit(1);
 }
 
+// Parse seguro del service account
 let serviceAccount;
 try {
   serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
@@ -26,6 +29,7 @@ try {
   process.exit(1);
 }
 
+// Inicializar Firebase Admin
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
@@ -40,18 +44,21 @@ app.use(express.static(path.join(__dirname, "public")));
 const PORT = process.env.PORT || 8080;
 
 // =============================
-// 📲 TOKENS EN MEMORIA
+// VARIABLES EN MEMORIA
 // =============================
+
 let tokensRegistrados = [];
 
 // =============================
-// 📌 REGISTRAR TOKEN
+// ENDPOINTS
 // =============================
+
+// 🔹 Registrar token FCM
 app.post("/registrar-token", (req, res) => {
   const { token } = req.body;
 
   if (!token) {
-    return res.status(400).json({ error: "Token no proporcionado" });
+    return res.status(400).json({ success: false, error: "Token no proporcionado" });
   }
 
   if (!tokensRegistrados.includes(token)) {
@@ -59,104 +66,158 @@ app.post("/registrar-token", (req, res) => {
   }
 
   console.log("✅ Token registrado:", token);
-
   return res.status(200).json({ success: true });
 });
 
-// =============================
-// 👤 REGISTRAR USUARIO
-// =============================
-app.post("/registrar-usuario", async (req, res) => {
-  const { email, nombre, numeroCasa, tipoUsuario, estado } = req.body;
 
-  if (!email || !nombre || !numeroCasa) {
-    return res.status(400).json({ error: "Faltan campos obligatorios" });
+// 🔹 Validar código de villa
+app.post("/validar-villa", async (req, res) => {
+  const { codigoVilla } = req.body;
+
+  if (!codigoVilla) {
+    return res.status(400).json({ success: false, error: "Código no proporcionado" });
   }
 
   try {
-    const nuevoUsuario = {
-      email,
-      nombre,
-      numeroCasa,
-      tipoUsuario: tipoUsuario || "vecino",
-      estado: estado || "activo",
-      fechaRegistro: new Date()
-    };
+    const villaRef = db.collection("villas").doc(codigoVilla);
+    const villaSnap = await villaRef.get();
 
-    const docRef = await db.collection("usuarios").add(nuevoUsuario);
-
-    console.log("👤 Usuario registrado:", docRef.id);
+    if (!villaSnap.exists || villaSnap.data().estado !== "activa") {
+      return res.status(400).json({
+        success: false,
+        error: "Código inválido o villa inactiva"
+      });
+    }
 
     return res.status(200).json({
       success: true,
-      id: docRef.id
+      nombreVilla: villaSnap.data().nombre
     });
 
   } catch (error) {
-    console.error("❌ Error registrando usuario:", error);
+    console.error("❌ Error validando villa:", error);
     return res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// =============================
-// 🚨 EMERGENCIA INDIVIDUAL
-// =============================
+
+// 🔹 Registrar usuario en villa
+app.post("/registrar-usuario", async (req, res) => {
+  const { nombre, numeroCasa, email, tipoUsuario, codigoVilla } = req.body;
+
+  if (!nombre || !numeroCasa || !email || !codigoVilla) {
+    return res.status(400).json({
+      success: false,
+      error: "Faltan datos obligatorios"
+    });
+  }
+
+  try {
+    // Verificar villa
+    const villaRef = db.collection("villas").doc(codigoVilla);
+    const villaSnap = await villaRef.get();
+
+    if (!villaSnap.exists || villaSnap.data().estado !== "activa") {
+      return res.status(400).json({
+        success: false,
+        error: "Villa inválida o inactiva"
+      });
+    }
+
+    const nuevoUsuario = {
+      nombre,
+      numeroCasa,
+      email,
+      tipoUsuario: tipoUsuario || "residente",
+      codigoVilla,
+      estado: "activo",
+      fechaCreacion: admin.firestore.FieldValue.serverTimestamp()
+    };
+
+    const usuarioRef = await db.collection("usuarios").add(nuevoUsuario);
+
+    console.log("✅ Usuario creado:", usuarioRef.id);
+
+    return res.status(200).json({
+      success: true,
+      idUsuario: usuarioRef.id,
+      nombreVilla: villaSnap.data().nombre
+    });
+
+  } catch (error) {
+    console.error("❌ Error registrando usuario:", error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+
+// 🔹 Enviar emergencia
 app.post("/emergencia", async (req, res) => {
   const { usuario, token } = req.body;
 
   if (!usuario || !usuario.nombre || !usuario.numeroCasa || !usuario.ubicacion) {
-    return res.status(400).json({ error: "Datos incompletos del usuario" });
+    return res.status(400).json({
+      success: false,
+      error: "Datos incompletos del usuario"
+    });
   }
 
-  const mensajeTexto = `🚨 Emergencia
+  const mensajeTexto = `🚨 Emergencia!
 Usuario: ${usuario.nombre}
 Casa: ${usuario.numeroCasa}
-Ubicación: ${usuario.ubicacion.lat}, ${usuario.ubicacion.lng}`;
+Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
+
+  const tokens = token ? [token] : tokensRegistrados;
+
+  if (!tokens || tokens.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: "No hay tokens registrados"
+    });
+  }
 
   const message = {
     notification: {
       title: "🚨 Emergencia",
       body: mensajeTexto
     },
-    tokens: token ? [token] : tokensRegistrados
+    tokens
   };
 
   try {
     const response = await admin.messaging().sendEachForMulticast(message);
-
-    // Guardar en Firestore
-    await db.collection("alertas").add({
-      tipo: "emergencia",
-      usuario: usuario.nombre,
-      numeroCasa: usuario.numeroCasa,
-      ubicacion: usuario.ubicacion,
-      fecha: new Date()
-    });
-
-    console.log("✅ Emergencia enviada:", response);
+    console.log("✅ Notificación enviada:", response);
 
     return res.status(200).json({ success: true });
 
   } catch (error) {
-    console.error("❌ Error enviando emergencia:", error);
-    return res.status(500).json({ success: false, error: error.message });
+    console.error("❌ Error enviando notificación:", error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 
-// =============================
-// 📢 ALERTA GENERAL
-// =============================
+
+// 🔹 Enviar alerta general
 app.post("/alerta", async (req, res) => {
-  const { titulo, mensaje, nivel } = req.body;
+  const { titulo, mensaje } = req.body;
 
   if (!titulo || !mensaje) {
-    return res.status(400).json({ error: "Faltan campos: titulo o mensaje" });
+    return res.status(400).json({
+      success: false,
+      error: "Faltan campos: titulo o mensaje"
+    });
   }
 
   if (tokensRegistrados.length === 0) {
     return res.status(200).json({
-      status: "ok",
-      mensaje: "Alerta recibida, pero no hay tokens registrados"
+      success: true,
+      mensaje: "Alerta recibida pero no hay tokens registrados"
     });
   }
 
@@ -170,64 +231,24 @@ app.post("/alerta", async (req, res) => {
 
   try {
     const response = await admin.messaging().sendEachForMulticast(message);
+    console.log("✅ Alerta enviada:", response);
 
-    // Guardar alerta en Firestore
-    await db.collection("alertas").add({
-      tipo: "general",
-      titulo,
-      mensaje,
-      nivel: nivel || "medio",
-      fecha: new Date()
-    });
-
-    console.log("✅ Alerta general enviada:", response);
-
-    return res.status(200).json({
-      status: "ok",
-      mensaje: "Alerta enviada a todos los dispositivos"
-    });
+    return res.status(200).json({ success: true });
 
   } catch (error) {
     console.error("❌ Error enviando alerta:", error);
     return res.status(500).json({
-      status: "error",
+      success: false,
       error: error.message
     });
   }
 });
 
-// 🔹 Validar código de villa
-app.post("/validar-villa", async (req, res) => {
-  const { codigo } = req.body;
 
-  if (!codigo) {
-    return res.status(400).json({ error: "Código no proporcionado" });
-  }
+// =============================
+// START SERVER
+// =============================
 
-  try {
-    const snapshot = await admin.firestore()
-      .collection("villas")
-      .where("codigo", "==", codigo)
-      .where("activa", "==", true)
-      .get();
-
-    if (snapshot.empty) {
-      return res.status(404).json({ success: false, error: "Código inválido o villa inactiva" });
-    }
-
-    const villa = snapshot.docs[0].data();
-
-    return res.status(200).json({
-      success: true,
-      nombreVilla: villa.nombre
-    });
-
-  } catch (error) {
-    console.error("❌ Error validando villa:", error);
-    return res.status(500).json({ success: false, error: error.message });
-  }
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
-app.listen(PORT, () =>
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`)
-);
-
