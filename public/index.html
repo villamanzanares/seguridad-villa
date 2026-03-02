@@ -5,53 +5,122 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alertas Villa</title>
 <style>
-  * { box-sizing: border-box; margin:0; padding:0; }
-  body { font-family: Arial, sans-serif; background:#f2f2f2; display:flex; justify-content:center; align-items:center; min-height:100vh; }
-  .phone-mockup { width:320px; max-width:90vw; background:#fff; border-radius:36px; border:4px solid #000; display:flex; flex-direction:column; padding:20px; box-shadow:0 8px 20px rgba(0,0,0,0.3); }
-  header { height:100px; display:flex; justify-content:center; align-items:center; font-size:1.3em; font-weight:bold; }
-  .btn-main { background:#d32f2f; color:#fff; border:none; height:130px; width:100%; border-radius:12px 12px 0 0; font-size:1.4em; font-weight:bold; display:flex; justify-content:center; align-items:center; cursor:pointer; margin-bottom:4px; }
-  .row-middle { display:flex; justify-content:space-between; margin-bottom:4px; }
-  .btn-square { background:#3949ab; color:#fff; border:none; height:90px; width:48%; border-radius:0; font-size:1em; font-weight:bold; display:flex; justify-content:center; align-items:center; cursor:pointer; }
-  .btn-bottom { background:#00796b; color:#fff; border:none; height:90px; width:100%; border-radius:0 0 12px 12px; font-size:1em; font-weight:bold; display:flex; justify-content:center; align-items:center; cursor:pointer; }
-  footer { height:120px; }
-</style>
-</head>
-<body>
-  <div class="phone-mockup">
-    <header>Villa Segura</header>
-    <button class="btn-main" id="btn-emergencia">🚨 EMERGENCIA</button>
-    <div class="row-middle">
-      <button class="btn-square" id="btn-carabineros">Carabineros</button>
-      <button class="btn-square" id="btn-seguridad">Seguridad Ciudadana</button>
-    </div>
-    <button class="btn-bottom" id="btn-estado">Estado</button>
-    <footer></footer>
-  </div>
+  /* Reset rápido */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+
+  .phone-mockup {
+    width: 320px;
+    max-width: 90vw;
+    background: #fff;
+    border-radius: 36px;
+    border: 4px solid #000;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  }
+
+  header {
+    height: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.3em;
+    font-weight: bold;
+  }
+
+  .btn-main {
+    background: #d32f2f;
+    color: #fff;
+    border: none;
+    height: 130px;
+    width: 100%;
+    border-radius: 12px 12px 0 0;
+    font-size: 1.4em;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    margin-bottom: 4px;
+  }
+
+  .row-middle {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .btn-square {
+    background: #3949ab;
+    color: #fff;
+    border: none;
+    height: 90px;
+    width: 48%;
+    font-size: 1em;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .btn-bottom {
+    background: #00796b;
+    color: #fff;
+    border: none;
+    height: 90px;
+    width: 100%;
+    border-radius: 0 0 12px 12px;
+    font-size: 1em;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  footer {
+    height: 120px;
+  }
+</style>
+
+<!-- Firebase SDKs -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.3.1/firebase-app.js";
-  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.3.1/firebase-messaging.js";
+  // Importar Firebase Messaging
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
 
   const firebaseConfig = {
-    apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+    apiKey: "TU_API_KEY",
     authDomain: "alerta-rosko.firebaseapp.com",
     projectId: "alerta-rosko",
     storageBucket: "alerta-rosko.appspot.com",
-    messagingSenderId: "1022811358317",
-    appId: "1:1022811358317:web:ce210848e7ed63d1412b64",
+    messagingSenderId: "118396150726725931815",
+    appId: "TU_APP_ID",
   };
 
   const app = initializeApp(firebaseConfig);
   const messaging = getMessaging(app);
-  const baseUrl = "https://alertas-rosko.onrender.com";
 
-  // 🌟 Registrar token automáticamente al entrar
+  // Public VAPID Key
+  const publicVapidKey = "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw";
+
   async function registrarToken() {
     try {
-      const currentToken = await getToken(messaging, { vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw" });
+      const currentToken = await getToken(messaging, { vapidKey: publicVapidKey });
       if (currentToken) {
         console.log("✅ Token generado:", currentToken);
-        const res = await fetch(baseUrl + "/registrar-token", {
+        const res = await fetch("/registrar-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token: currentToken })
@@ -59,36 +128,69 @@
         const data = await res.json();
         console.log("Servidor respondió:", data);
       } else {
-        console.log("⚠️ No se pudo generar token. Asegúrate de permitir notificaciones.");
+        console.warn("⚠️ No se pudo generar token. Revisa permisos de notificación.");
       }
     } catch (err) {
-      console.error("Error registrando token:", err);
+      console.error("❌ Error al generar token:", err);
     }
   }
 
   registrarToken();
 
-  async function enviarAlerta(tipo) {
-    const usuario = { nombre: "Juan Pérez", casa: "123", ubicacion: { lat: -33.45, lng: -70.66 } };
-    try {
-      const res = await fetch(baseUrl + "/emergencia", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usuario })
-      });
-      const data = await res.json();
-      if (data.success) alert(`✅ ${tipo} enviada correctamente`);
-      else alert(`❌ Error enviando ${tipo}: ${data.error}`);
-    } catch (err) {
-      alert(`❌ Error enviando ${tipo}: ${err}`);
-    }
-  }
-
-  document.getElementById("btn-emergencia").addEventListener("click", () => enviarAlerta("EMERGENCIA"));
-  document.getElementById("btn-carabineros").addEventListener("click", () => enviarAlerta("CARABINEROS"));
-  document.getElementById("btn-seguridad").addEventListener("click", () => enviarAlerta("SEGURIDAD CIUDADANA"));
-  document.getElementById("btn-estado").addEventListener("click", () => enviarAlerta("ESTADO"));
-
+  onMessage(messaging, (payload) => {
+    console.log("📬 Notificación recibida en primer plano:", payload);
+    alert(payload.notification.body);
+  });
 </script>
+</head>
+
+<body>
+  <div class="phone-mockup">
+    <header>Villa Segura</header>
+
+    <button class="btn-main" id="btn-emergencia">🚨 EMERGENCIA</button>
+
+    <div class="row-middle">
+      <button class="btn-square" id="btn-carabineros">Carabineros</button>
+      <button class="btn-square" id="btn-seguridad">Seguridad Ciudadana</button>
+    </div>
+
+    <button class="btn-bottom" id="btn-estado">Estado</button>
+
+    <footer></footer>
+  </div>
+
+  <script>
+    const baseUrl = "/emergencia";
+
+    async function enviarAlerta(tipo) {
+      const usuario = {
+        nombre: "Juan Pérez",
+        casa: "123",
+        ubicacion: { lat: -33.45, lng: -70.66 }
+      };
+
+      try {
+        const res = await fetch(baseUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usuario })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`✅ ${tipo} enviada correctamente`);
+        } else {
+          alert(`❌ Error enviando ${tipo}: ${data.error}`);
+        }
+      } catch (err) {
+        alert(`❌ Error enviando ${tipo}: ${err}`);
+      }
+    }
+
+    document.getElementById("btn-emergencia").addEventListener("click", () => enviarAlerta("EMERGENCIA"));
+    document.getElementById("btn-carabineros").addEventListener("click", () => enviarAlerta("CARABINEROS"));
+    document.getElementById("btn-seguridad").addEventListener("click", () => enviarAlerta("SEGURIDAD CIUDADANA"));
+    document.getElementById("btn-estado").addEventListener("click", () => enviarAlerta("ESTADO"));
+  </script>
 </body>
 </html>
