@@ -4,10 +4,57 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Alertas Villa</title>
-<style>
-  /* Reset rápido */
-  * { box-sizing: border-box; margin: 0; padding: 0; }
 
+<!-- Firebase SDKs -->
+<script type="module">
+  // Importar Firebase
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-app.js";
+  import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.3.0/firebase-messaging.js";
+
+  // Configuración Firebase (reemplaza con tus valores)
+  const firebaseConfig = {
+    apiKey: "TU_API_KEY",
+    authDomain: "alerta-rosko.firebaseapp.com",
+    projectId: "alerta-rosko",
+    storageBucket: "alerta-rosko.appspot.com",
+    messagingSenderId: "TU_SENDER_ID",
+    appId: "TU_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
+
+  // Solicitar permiso y generar token
+  async function registrarToken() {
+    try {
+      const currentToken = await getToken(messaging, { vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw" });
+      if (currentToken) {
+        console.log("✅ Token generado:", currentToken);
+        // Enviar token al backend
+        await fetch("/registrar-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: currentToken })
+        });
+        console.log("✅ Token registrado en el servidor");
+      } else {
+        console.log("⚠️ No se obtuvo token, revisa permisos del navegador");
+      }
+    } catch (err) {
+      console.error("❌ Error generando token:", err);
+    }
+  }
+
+  registrarToken();
+
+  // Escuchar mensajes mientras la página está activa
+  onMessage(messaging, (payload) => {
+    console.log("📩 Mensaje recibido:", payload);
+    alert(payload.notification?.body || "Nueva alerta recibida");
+  });
+</script>
+
+<style>
   body {
     font-family: Arial, sans-serif;
     background: #f2f2f2;
@@ -89,61 +136,9 @@
     cursor: pointer;
   }
 
-  footer {
-    height: 120px;
-  }
+  footer { height: 120px; }
 </style>
-
-<!-- Firebase SDKs -->
-<script type="module">
-  // Importar Firebase Messaging
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
-
-  const firebaseConfig = {
-    apiKey: "TU_API_KEY",
-    authDomain: "alerta-rosko.firebaseapp.com",
-    projectId: "alerta-rosko",
-    storageBucket: "alerta-rosko.appspot.com",
-    messagingSenderId: "118396150726725931815",
-    appId: "TU_APP_ID",
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const messaging = getMessaging(app);
-
-  // Public VAPID Key
-  const publicVapidKey = "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw";
-
-  async function registrarToken() {
-    try {
-      const currentToken = await getToken(messaging, { vapidKey: publicVapidKey });
-      if (currentToken) {
-        console.log("✅ Token generado:", currentToken);
-        const res = await fetch("/registrar-token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: currentToken })
-        });
-        const data = await res.json();
-        console.log("Servidor respondió:", data);
-      } else {
-        console.warn("⚠️ No se pudo generar token. Revisa permisos de notificación.");
-      }
-    } catch (err) {
-      console.error("❌ Error al generar token:", err);
-    }
-  }
-
-  registrarToken();
-
-  onMessage(messaging, (payload) => {
-    console.log("📬 Notificación recibida en primer plano:", payload);
-    alert(payload.notification.body);
-  });
-</script>
 </head>
-
 <body>
   <div class="phone-mockup">
     <header>Villa Segura</header>
@@ -156,41 +151,41 @@
     </div>
 
     <button class="btn-bottom" id="btn-estado">Estado</button>
-
     <footer></footer>
   </div>
 
-  <script>
-    const baseUrl = "/emergencia";
+<script>
+  const baseUrl = "/emergencia";
 
-    async function enviarAlerta(tipo) {
-      const usuario = {
-        nombre: "Juan Pérez",
-        casa: "123",
-        ubicacion: { lat: -33.45, lng: -70.66 }
-      };
+  async function enviarAlerta(tipo) {
+    const usuario = {
+      nombre: "Juan Pérez",
+      casa: "123",
+      ubicacion: { lat: -33.45, lng: -70.66 }
+    };
 
-      try {
-        const res = await fetch(baseUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ usuario })
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert(`✅ ${tipo} enviada correctamente`);
-        } else {
-          alert(`❌ Error enviando ${tipo}: ${data.error}`);
-        }
-      } catch (err) {
-        alert(`❌ Error enviando ${tipo}: ${err}`);
+    try {
+      const res = await fetch(baseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuario })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert(`✅ ${tipo} enviada correctamente`);
+      } else {
+        alert(`❌ Error enviando ${tipo}: ${data.error}`);
       }
+    } catch (err) {
+      alert(`❌ Error enviando ${tipo}: ${err}`);
     }
+  }
 
-    document.getElementById("btn-emergencia").addEventListener("click", () => enviarAlerta("EMERGENCIA"));
-    document.getElementById("btn-carabineros").addEventListener("click", () => enviarAlerta("CARABINEROS"));
-    document.getElementById("btn-seguridad").addEventListener("click", () => enviarAlerta("SEGURIDAD CIUDADANA"));
-    document.getElementById("btn-estado").addEventListener("click", () => enviarAlerta("ESTADO"));
-  </script>
+  document.getElementById("btn-emergencia").addEventListener("click", () => enviarAlerta("EMERGENCIA"));
+  document.getElementById("btn-carabineros").addEventListener("click", () => enviarAlerta("CARABINEROS"));
+  document.getElementById("btn-seguridad").addEventListener("click", () => enviarAlerta("SEGURIDAD CIUDADANA"));
+  document.getElementById("btn-estado").addEventListener("click", () => enviarAlerta("ESTADO"));
+</script>
 </body>
 </html>
