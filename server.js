@@ -36,6 +36,9 @@ app.use(bodyParser.json());
 
 // 🔥 Servir archivos estáticos desde public
 app.use(express.static(path.join(__dirname, "public")));
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 // 🔹 Forzar la raíz a index.html de public
 app.get("/", (req, res) => {
@@ -119,3 +122,4 @@ app.post("/alerta", async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
+
