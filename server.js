@@ -1,9 +1,6 @@
 import express from "express";
 import cors from "cors";
 import admin from "firebase-admin";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const app = express();
 app.use(cors());
@@ -11,7 +8,7 @@ app.use(express.json());
 
 // 🔐 Inicializar Firebase Admin
 if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-  console.log("❌ ENV no definida");
+  console.log("❌ ENV FIREBASE_SERVICE_ACCOUNT no definida");
   process.exit(1);
 }
 
@@ -107,7 +104,7 @@ app.post("/registrar-usuario", async (req, res) => {
 });
 
 // ======================================================
-// 📲 REGISTRAR TOKEN FCM
+// 📲 REGISTRAR TOKEN
 // ======================================================
 app.post("/registrar-token", async (req, res) => {
   const { token, idUsuario } = req.body;
@@ -137,7 +134,7 @@ app.post("/registrar-token", async (req, res) => {
 });
 
 // ======================================================
-// 🚨 ENVIAR EMERGENCIA
+// 🚨 EMERGENCIA
 // ======================================================
 app.post("/emergencia", async (req, res) => {
   const { idUsuario, ubicacion } = req.body;
@@ -145,13 +142,12 @@ app.post("/emergencia", async (req, res) => {
   if (!idUsuario || !ubicacion) {
     return res.status(400).json({
       success: false,
-      error: "Datos incompletos del usuario",
+      error: "Datos incompletos",
     });
   }
 
   try {
-    const usuarioRef = db.collection("usuarios").doc(idUsuario);
-    const usuarioSnap = await usuarioRef.get();
+    const usuarioSnap = await db.collection("usuarios").doc(idUsuario).get();
 
     if (!usuarioSnap.exists) {
       return res.status(400).json({
@@ -213,9 +209,6 @@ app.post("/emergencia", async (req, res) => {
   }
 });
 
-// ======================================================
-// 🚀 INICIAR SERVIDOR
-// ======================================================
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
