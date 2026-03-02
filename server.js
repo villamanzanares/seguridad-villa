@@ -196,6 +196,38 @@ app.post("/alerta", async (req, res) => {
   }
 });
 
+// 🔹 Validar código de villa
+app.post("/validar-villa", async (req, res) => {
+  const { codigo } = req.body;
+
+  if (!codigo) {
+    return res.status(400).json({ error: "Código no proporcionado" });
+  }
+
+  try {
+    const snapshot = await admin.firestore()
+      .collection("villas")
+      .where("codigo", "==", codigo)
+      .where("activa", "==", true)
+      .get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({ success: false, error: "Código inválido o villa inactiva" });
+    }
+
+    const villa = snapshot.docs[0].data();
+
+    return res.status(200).json({
+      success: true,
+      nombreVilla: villa.nombre
+    });
+
+  } catch (error) {
+    console.error("❌ Error validando villa:", error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
 app.listen(PORT, () =>
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`)
 );
+
