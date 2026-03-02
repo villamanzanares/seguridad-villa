@@ -9,7 +9,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Validar variable de entorno
+// Validación de la variable de entorno
 if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
   console.error("❌ ERROR: La variable FIREBASE_SERVICE_ACCOUNT_JSON no está definida.");
   process.exit(1);
@@ -31,22 +31,21 @@ admin.initializeApp({
 });
 
 const app = express();
+
 app.use(cors());
 app.use(bodyParser.json());
 
-// 🔥 Servir archivos estáticos desde public
+// Servir archivos estáticos desde /public
 app.use(express.static(path.join(__dirname, "public")));
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
 
-// 🔹 Forzar la raíz a index.html de public
+// Redirigir la raíz "/" al index.html dentro de public
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 const PORT = process.env.PORT || 8080;
 
+// Array para guardar tokens FCM registrados
 let tokensRegistrados = [];
 
 // Registrar token en backend
@@ -78,10 +77,6 @@ Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
     tokens: token ? [token] : tokensRegistrados
   };
 
-  if (message.tokens.length === 0) {
-    return res.status(200).json({ success: false, error: "No hay dispositivos registrados" });
-  }
-
   try {
     const response = await admin.messaging().sendMulticast(message);
     console.log("✅ Notificación enviada:", response);
@@ -92,7 +87,7 @@ Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
   }
 });
 
-// 🔹 Endpoint /alerta para enviar a todos los tokens
+// Endpoint /alerta para enviar notificaciones a todos los tokens registrados
 app.post("/alerta", async (req, res) => {
   const { titulo, mensaje, nivel, fecha } = req.body;
 
@@ -122,4 +117,3 @@ app.post("/alerta", async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
-
