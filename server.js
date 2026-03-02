@@ -70,7 +70,7 @@ Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
   };
 
   try {
-    const response = await admin.messaging().sendMulticast(message);
+    const response = await admin.messaging().sendEachForMulticast(message);
     console.log("✅ Notificación enviada:", response);
     return res.status(200).json({ success: true });
   } catch (error) {
@@ -99,7 +99,7 @@ app.post("/alerta", async (req, res) => {
   };
 
   try {
-    const response = await admin.messaging().sendMulticast(message);
+    const response = await admin.messaging().sendEachForMulticast(message);
     console.log("✅ Notificación enviada a tokens registrados:", response);
     return res.status(200).json({ status: "ok", mensaje: "Alerta enviada a todos los dispositivos" });
   } catch (error) {
@@ -109,3 +109,4 @@ app.post("/alerta", async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+
