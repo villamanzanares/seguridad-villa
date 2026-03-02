@@ -5,12 +5,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js')
 
 // Configuración de Firebase (igual que en index.html)
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
+  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
   projectId: "alerta-rosko",
   storageBucket: "alerta-rosko.appspot.com",
   messagingSenderId: "118396150726725931815",
-  appId: "TU_APP_ID"
+  appId: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I"
 };
 
 firebase.initializeApp(firebaseConfig);
