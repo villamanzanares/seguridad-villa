@@ -1,87 +1,72 @@
 import express from "express";
-import cors from "cors";
-import bodyParser from "body-parser";
-import path from "path";
-import { fileURLToPath } from "url";
 import admin from "firebase-admin";
+import cors from "cors";
 
-// __dirname para ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const app = express();
+app.use(express.json());
+app.use(cors());
 
-// Validar variable de entorno FIREBASE_SERVICE_ACCOUNT_JSON
+// 🔹 Array para guardar tokens registrados (en memoria)
+const tokensRegistrados = [];
+
+// 🔹 Inicializar Firebase Admin con tu variable de entorno
 if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
   console.error("❌ ERROR: La variable FIREBASE_SERVICE_ACCOUNT_JSON no está definida.");
   process.exit(1);
 }
 
-// Parse del JSON de service account
-let serviceAccount;
-try {
-  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-  serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
-} catch (err) {
-  console.error("❌ ERROR: No se pudo parsear FIREBASE_SERVICE_ACCOUNT_JSON:", err);
-  process.exit(1);
-}
-
-// Inicializar Firebase Admin
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON))
 });
 
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, "public")));
+console.log("✅ Firebase inicializado correctamente");
 
-const PORT = process.env.PORT || 8080;
-
-// 🔹 Array temporal de tokens registrados
-let tokensRegistrados = [];
-
-// Registrar token
+// 🔹 Endpoint para registrar token FCM
 app.post("/registrar-token", (req, res) => {
   const { token } = req.body;
-  if (!token) return res.status(400).json({ error: "Token no proporcionado" });
+  if (!token) return res.status(400).json({ success: false, error: "No se recibió token" });
 
-  if (!tokensRegistrados.includes(token)) tokensRegistrados.push(token);
-  console.log("✅ Token registrado:", token);
-  return res.status(200).json({ success: true });
-});
-
-// Enviar alerta de emergencia
-app.post("/emergencia", async (req, res) => {
-  const { usuario, token } = req.body;
-
-  if (!usuario || !usuario.nombre || !usuario.casa || !usuario.ubicacion) {
-    return res.status(400).json({ error: "Datos incompletos del usuario" });
+  if (!tokensRegistrados.includes(token)) {
+    tokensRegistrados.push(token);
+    console.log("✅ Token registrado:", token);
   }
 
-  const mensajeTexto = `🚨 Emergencia!
-Usuario: ${usuario.nombre}
-Casa: ${usuario.casa}
-Ubicación: ${usuario.ubicacion.lat},${usuario.ubicacion.lng}`;
+  res.json({ success: true, tokens: tokensRegistrados.length });
+});
 
-  const tokensEnviar = token ? [token] : tokensRegistrados;
+// 🔹 Endpoint para enviar alerta de emergencia
+app.post("/emergencia", async (req, res) => {
+  const { usuario } = req.body;
 
-  if (tokensEnviar.length === 0) {
-    return res.status(400).json({ error: "No hay dispositivos registrados" });
+  if (!usuario || !usuario.nombre || !usuario.casa) {
+    return res.status(400).json({ success: false, error: "Datos incompletos del usuario" });
+  }
+
+  if (tokensRegistrados.length === 0) {
+    return res.status(400).json({ success: false, error: "No hay dispositivos registrados" });
   }
 
   const message = {
-    notification: { title: "🚨 Emergencia", body: mensajeTexto },
-    tokens: tokensEnviar
+    notification: {
+      title: `🚨 Emergencia de ${usuario.nombre}`,
+      body: `Casa: ${usuario.casa}`
+    },
+    tokens: tokensRegistrados
   };
 
   try {
-    const response = await admin.messaging().sendEachForMulticast(message);
-    console.log("✅ Notificación enviada:", response);
-    return res.status(200).json({ success: true });
-  } catch (error) {
-    console.error("❌ Error enviando notificación:", error);
-    return res.status(500).json({ success: false, error: error.message });
+    const response = await admin.messaging().sendMulticast(message);
+    console.log("✅ Alerta enviada a todos los dispositivos:", response.successCount);
+    res.json({ success: true, response });
+  } catch (err) {
+    console.error("❌ Error enviando alerta:", err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
+// 🔹 Servir frontend si quieres (opcional)
+app.use(express.static("public"));
+
+// 🔹 Iniciar servidor
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
