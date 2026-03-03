@@ -11,16 +11,21 @@ console.log("🔥 VERSION NUEVA SERVER 🔥");
 let serviceAccount;
 
 try {
-  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  const raw = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+
+  raw.private_key = raw.private_key.replace(/\\n/g, "\n");
+
+  serviceAccount = raw;
+
 } catch (error) {
-  console.error("❌ Error leyendo FIREBASE_SERVICE_ACCOUNT_JSON");
+  console.error("❌ Error leyendo FIREBASE_SERVICE_ACCOUNT_JSON:", error);
 }
 
 if (serviceAccount) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
-  console.log("✅ Firebase inicializado");
+  console.log("✅ Firebase inicializado correctamente");
 } else {
   console.log("❌ Firebase NO inicializado");
 }
@@ -94,3 +99,4 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
+
