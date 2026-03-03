@@ -54,6 +54,21 @@
 
     let fcmToken = null;
 
+    async function registrarTokenEnBackend(token) {
+      try {
+        const res = await fetch("https://alertas-rosko.onrender.com/registrar-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token })
+        });
+        const data = await res.json();
+        console.log("✅ Token registrado en backend:", data);
+      } catch (err) {
+        console.error("❌ Error registrando token en backend:", err);
+      }
+    }
+
+    // Registrar Service Worker y obtener token FCM
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/firebase-messaging-sw.js')
         .then(registration => getToken(messaging, {
@@ -63,6 +78,7 @@
         .then(token => {
           fcmToken = token;
           console.log("✅ Token generado:", token);
+          registrarTokenEnBackend(token); // envío automático al backend
         })
         .catch(err => console.error("❌ Error registrando SW o generando token:", err));
     }
