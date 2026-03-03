@@ -55,13 +55,13 @@ app.post("/emergencia", async (req, res) => {
   };
 
   try {
-    const response = await admin.messaging().sendMulticast(message);
-    console.log("✅ Alerta enviada a todos los dispositivos:", response.successCount);
-    res.json({ success: true, response });
-  } catch (err) {
-    console.error("❌ Error enviando alerta:", err);
-    res.status(500).json({ success: false, error: err.message });
-  }
+  const response = await admin.messaging().sendMulticast(message);
+  console.log("RESPUESTA COMPLETA:", JSON.stringify(response, null, 2));
+  res.json({ success: true, response });
+} catch (err) {
+  console.error("ERROR DETALLADO:", err);
+  res.status(500).json({ success: false, error: err.message });
+}
 });
 
 // 🔹 Servir frontend si quieres (opcional)
@@ -70,3 +70,4 @@ app.use(express.static("public"));
 // 🔹 Iniciar servidor
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
+
