@@ -55,12 +55,20 @@ app.post("/emergencia", async (req, res) => {
   };
 
   try {
-  const response = await admin.messaging().sendMulticast(message);
-  console.log("RESPUESTA COMPLETA:", JSON.stringify(response, null, 2));
+  const response = await admin.messaging().send({
+    token: tokens[0],   // solo uno por ahora
+    notification: {
+      title: "🚨 EMERGENCIA",
+      body: "Se ha activado el botón de emergencia"
+    }
+  });
+
+  console.log("ENVÍO EXITOSO:", response);
   res.json({ success: true, response });
-} catch (err) {
-  console.error("ERROR DETALLADO:", err);
-  res.status(500).json({ success: false, error: err.message });
+
+} catch (error) {
+  console.error("ERROR REAL:", error);
+  res.status(500).json({ success: false, error: error.message });
 }
 });
 
@@ -70,4 +78,5 @@ app.use(express.static("public"));
 // 🔹 Iniciar servidor
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
+
 
