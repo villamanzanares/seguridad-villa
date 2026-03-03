@@ -38,13 +38,14 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-    import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
 
+    // 🔹 Configuración con tus datos
     const firebaseConfig = {
       apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
       authDomain: "alerta-rosko.firebaseapp.com",
       projectId: "alerta-rosko",
-      storageBucket: "alerta-rosko.appspot.com",
+      storageBucket: "alerta-rosko.firebasestorage.app",
       messagingSenderId: "1022811358317",
       appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
     };
@@ -68,7 +69,7 @@
       }
     }
 
-    // Registrar Service Worker y obtener token FCM
+    // 🔹 Registrar Service Worker y obtener token FCM
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/firebase-messaging-sw.js')
         .then(registration => getToken(messaging, {
@@ -78,7 +79,7 @@
         .then(token => {
           fcmToken = token;
           console.log("✅ Token generado:", token);
-          registrarTokenEnBackend(token); // envío automático al backend
+          registrarTokenEnBackend(token);
         })
         .catch(err => console.error("❌ Error registrando SW o generando token:", err));
     }
@@ -100,10 +101,33 @@
       }
     }
 
+    // 🔹 Botones
     document.getElementById("btn-emergencia").addEventListener("click", () => enviarAlerta("EMERGENCIA"));
     document.getElementById("btn-carabineros").addEventListener("click", () => enviarAlerta("CARABINEROS"));
     document.getElementById("btn-seguridad").addEventListener("click", () => enviarAlerta("SEGURIDAD CIUDADANA"));
     document.getElementById("btn-estado").addEventListener("click", () => enviarAlerta("ESTADO"));
+
+    // 🔹 Notificaciones mientras la página está abierta
+    onMessage(messaging, (payload) => {
+      console.log('📢 Mensaje recibido en foreground:', payload);
+
+      const notificationTitle = payload.notification?.title || '🚨 Alerta';
+      const notificationOptions = {
+        body: payload.notification?.body || '¡Revisa la aplicación!',
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        vibrate: [200, 100, 200],
+        tag: 'alerta-unica',
+        renotify: true
+      };
+
+      if (Notification.permission === 'granted') {
+        new Notification(notificationTitle, notificationOptions);
+      }
+
+      const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+      audio.play();
+    });
   </script>
 </body>
 </html>
