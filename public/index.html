@@ -10,88 +10,13 @@
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    .phone-mockup {
-      width: 320px;
-      max-width: 90vw;
-      background: #fff;
-      border-radius: 36px;
-      border: 4px solid #000;
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-    }
-
-    header {
-      height: 100px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 1.3em;
-      font-weight: bold;
-    }
-
-    .btn-main {
-      background: #d32f2f;
-      color: #fff;
-      border: none;
-      height: 130px;
-      width: 100%;
-      border-radius: 12px 12px 0 0;
-      font-size: 1.4em;
-      font-weight: bold;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      margin-bottom: 4px;
-    }
-
-    .row-middle {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 4px;
-    }
-
-    .btn-square {
-      background: #3949ab;
-      color: #fff;
-      border: none;
-      height: 90px;
-      width: 48%;
-      font-size: 1em;
-      font-weight: bold;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-    }
-
-    .btn-bottom {
-      background: #00796b;
-      color: #fff;
-      border: none;
-      height: 90px;
-      width: 100%;
-      border-radius: 0 0 12px 12px;
-      font-size: 1em;
-      font-weight: bold;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-    }
-
+    body { font-family: Arial, sans-serif; background: #f2f2f2; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .phone-mockup { width: 320px; max-width: 90vw; background: #fff; border-radius: 36px; border: 4px solid #000; display: flex; flex-direction: column; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+    header { height: 100px; display: flex; justify-content: center; align-items: center; font-size: 1.3em; font-weight: bold; }
+    .btn-main { background: #d32f2f; color: #fff; border: none; height: 130px; width: 100%; border-radius: 12px 12px 0 0; font-size: 1.4em; font-weight: bold; display: flex; justify-content: center; align-items: center; cursor: pointer; margin-bottom: 4px; }
+    .row-middle { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .btn-square { background: #3949ab; color: #fff; border: none; height: 90px; width: 48%; font-size: 1em; font-weight: bold; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+    .btn-bottom { background: #00796b; color: #fff; border: none; height: 90px; width: 100%; border-radius: 0 0 12px 12px; font-size: 1em; font-weight: bold; display: flex; justify-content: center; align-items: center; cursor: pointer; }
     footer { height: 120px; }
   </style>
 </head>
@@ -111,19 +36,17 @@
     <footer></footer>
   </div>
 
-  <!-- Firebase JS -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
     import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
 
-    // 🔹 Configuración Firebase
     const firebaseConfig = {
-      apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+      apiKey: "TU_API_KEY_REAL",
       authDomain: "alerta-rosko.firebaseapp.com",
       projectId: "alerta-rosko",
       storageBucket: "alerta-rosko.appspot.com",
-      messagingSenderId: "1022811358317",
-      appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+      messagingSenderId: "TU_MESSAGING_SENDER_ID_REAL",
+      appId: "TU_APP_ID_REAL"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -131,47 +54,31 @@
 
     let fcmToken = null;
 
-    // 🔹 Registrar Service Worker y generar token
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then(registration => {
-          console.log("✅ Service Worker registrado", registration);
-          return getToken(messaging, {
-            vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-            serviceWorkerRegistration: registration
-          });
-        })
+        .then(registration => getToken(messaging, {
+          vapidKey: "TU_PUBLIC_VAPID_KEY_REAL",
+          serviceWorkerRegistration: registration
+        }))
         .then(token => {
           fcmToken = token;
           console.log("✅ Token generado:", token);
         })
-        .catch(err => {
-          console.error("❌ Error registrando SW o generando token:", err);
-        });
+        .catch(err => console.error("❌ Error registrando SW o generando token:", err));
     }
 
     const baseUrl = "https://alertas-rosko.onrender.com/emergencia";
 
     async function enviarAlerta(tipo) {
-      const usuario = {
-        nombre: "Juan Pérez",
-        casa: "123",
-        ubicacion: { lat: -33.45, lng: -70.66 }
-      };
-
+      const usuario = { nombre: "Juan Pérez", casa: "123", ubicacion: { lat: -33.45, lng: -70.66 } };
       try {
         const res = await fetch(baseUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ usuario, token: fcmToken })
         });
-
         const data = await res.json();
-        if (data.success) {
-          alert(`✅ ${tipo} enviada correctamente`);
-        } else {
-          alert(`❌ Error enviando ${tipo}: ${data.error}`);
-        }
+        alert(data.success ? `✅ ${tipo} enviada correctamente` : `❌ Error enviando ${tipo}: ${data.error}`);
       } catch (err) {
         alert(`❌ Error enviando ${tipo}: ${err}`);
       }
