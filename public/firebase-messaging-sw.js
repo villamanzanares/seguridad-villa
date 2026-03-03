@@ -12,9 +12,18 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
-  console.log('[SW] Mensaje en segundo plano recibido:', payload);
-  const notificationTitle = payload.notification.title;
-  const notificationOptions = { body: payload.notification.body };
+messaging.onBackgroundMessage(function(payload) {
+  console.log('[Service Worker] Background message received:', payload);
+
+  const notificationTitle = payload.notification?.title || '🚨 Alerta';
+  const notificationOptions = {
+    body: payload.notification?.body || '¡Revisa la aplicación!',
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
+    vibrate: [200, 100, 200],
+    tag: 'alerta-unica',
+    renotify: true
+  };
+
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
