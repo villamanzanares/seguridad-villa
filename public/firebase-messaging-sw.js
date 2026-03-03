@@ -2,12 +2,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js');
 
 firebase.initializeApp({
-  apiKey: "TU_API_KEY_REAL",
+  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
   projectId: "alerta-rosko",
   storageBucket: "alerta-rosko.appspot.com",
-  messagingSenderId: "TU_MESSAGING_SENDER_ID_REAL",
-  appId: "TU_APP_ID_REAL"
+  messagingSenderId: "1022811358317",
+  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
 });
 
 const messaging = firebase.messaging();
