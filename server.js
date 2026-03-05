@@ -1,10 +1,8 @@
 import express from "express";
 import admin from "firebase-admin";
-import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 
-dotenv.config();
 
 const app = express();
 app.use(express.json());
@@ -61,3 +59,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
+
