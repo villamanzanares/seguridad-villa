@@ -3,35 +3,30 @@ import admin from "firebase-admin";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import cors from "cors";
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
-/* rutas de directorio */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /* servir frontend */
 app.use(express.static(path.join(__dirname, "public")));
 
-/* =========================
+/* ---------------------------
    INICIALIZAR FIREBASE
-========================= */
+--------------------------- */
+
+let firebaseReady = false;
 
 try {
 
-  if (!process.env.PROJECT_ID) {
-    console.log("❌ PROJECT_ID no definido");
-  }
-
-  if (!process.env.CLIENT_EMAIL) {
-    console.log("❌ CLIENT_EMAIL no definido");
-  }
-
-  if (!process.env.PRIVATE_KEY) {
-    console.log("❌ PRIVATE_KEY no definida");
+  if (!process.env.PROJECT_ID || !process.env.CLIENT_EMAIL || !process.env.PRIVATE_KEY) {
+    throw new Error("Faltan variables de entorno de Firebase");
   }
 
   const serviceAccount = {
@@ -44,84 +39,77 @@ try {
     credential: admin.credential.cert(serviceAccount)
   });
 
-  console.log("✅ Firebase inicializado");
+  firebaseReady = true;
+  console.log("✅ Firebase inicializado correctamente");
 
 } catch (error) {
 
-  console.log("❌ Error inicializando Firebase:", error);
+  console.error("❌ Error inicializando Firebase:", error.message);
 
 }
 
-/* =========================
-   REGISTRAR TELEFONO
-========================= */
+/* ---------------------------
+   ALMACENAR TOKENS
+--------------------------- */
 
-app.post("/register", async (req, res) => {
+const tokens = new Set();
+
+app.post("/registrar-token", (req, res) => {
 
   const { token } = req.body;
 
   if (!token) {
-    return res.status(400).json({
-      ok: false,
-      error: "Token no recibido"
-    });
+    return res.json({ success: false, error: "Token vacío" });
   }
 
-  try {
+  tokens.add(token);
 
-    await admin.messaging().subscribeToTopic(token, "alertas");
+  console.log("📱 Token registrado:", token);
 
-    console.log("✅ Token registrado:", token);
-
-    res.json({
-      ok: true,
-      mensaje: "Token registrado"
-    });
-
-  } catch (error) {
-
-    console.log("❌ Error registrando token:", error);
-
-    res.status(500).json({
-      ok: false,
-      error: error.message
-    });
-
-  }
+  res.json({ success: true, totalTokens: tokens.size });
 
 });
 
-/* =========================
-   BOTON EMERGENCIA
-========================= */
+/* ---------------------------
+   ALERTA DE EMERGENCIA
+--------------------------- */
 
 app.post("/emergency", async (req, res) => {
 
+  if (!firebaseReady) {
+    return res.json({
+      success: false,
+      error: "Firebase no está inicializado"
+    });
+  }
+
   try {
+
+    const { usuario, tipo } = req.body;
 
     const message = {
       notification: {
-        title: "🚨 EMERGENCIA",
-        body: "Se ha activado una alerta"
+        title: "🚨 ALERTA VECINAL",
+        body: `${usuario?.nombre || "Vecino"} activó una alerta`
       },
-      topic: "alertas"
+      tokens: Array.from(tokens)
     };
 
-    const response = await admin.messaging().send(message);
+    const response = await admin.messaging().sendEachForMulticast(message);
 
-    console.log("✅ Notificación enviada:", response);
+    console.log("📢 Notificaciones enviadas:", response.successCount);
 
     res.json({
-      ok: true,
-      mensaje: "Notificación enviada"
+      success: true,
+      enviados: response.successCount
     });
 
   } catch (error) {
 
-    console.log("❌ Error enviando emergencia:", error);
+    console.error("❌ Error enviando alerta:", error);
 
-    res.status(500).json({
-      ok: false,
+    res.json({
+      success: false,
       error: error.message
     });
 
@@ -129,20 +117,12 @@ app.post("/emergency", async (req, res) => {
 
 });
 
-/* =========================
-   RUTA PRINCIPAL
-========================= */
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
-});
-
-/* =========================
-   INICIAR SERVIDOR
-========================= */
+/* ---------------------------
+   SERVIDOR
+--------------------------- */
 
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
-  console.log("🚀 Servidor corriendo en puerto", PORT);
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
