@@ -9,14 +9,30 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
+/* rutas de directorio */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /* servir frontend */
 app.use(express.static(path.join(__dirname, "public")));
 
-/* inicializar Firebase */
+/* =========================
+   INICIALIZAR FIREBASE
+========================= */
+
 try {
+
+  if (!process.env.PROJECT_ID) {
+    console.log("❌ PROJECT_ID no definido");
+  }
+
+  if (!process.env.CLIENT_EMAIL) {
+    console.log("❌ CLIENT_EMAIL no definido");
+  }
+
+  if (!process.env.PRIVATE_KEY) {
+    console.log("❌ PRIVATE_KEY no definida");
+  }
 
   const serviceAccount = {
     projectId: process.env.PROJECT_ID,
@@ -32,68 +48,101 @@ try {
 
 } catch (error) {
 
-  console.error("❌ Error inicializando Firebase:", error);
+  console.log("❌ Error inicializando Firebase:", error);
 
 }
 
-/* registrar token */
-let tokens = [];
+/* =========================
+   REGISTRAR TELEFONO
+========================= */
 
-app.post("/register", (req, res) => {
+app.post("/register", async (req, res) => {
 
-  const token = req.body.token;
+  const { token } = req.body;
 
-  if (!tokens.includes(token)) {
-    tokens.push(token);
+  if (!token) {
+    return res.status(400).json({
+      ok: false,
+      error: "Token no recibido"
+    });
   }
-
-  console.log("✅ Token registrado:", token);
-
-  res.json({ success: true });
-
-});
-
-/* enviar emergencia */
-app.post("/emergency", async (req, res) => {
-
-  if (tokens.length === 0) {
-    return res.json({ success: false, message: "No hay dispositivos registrados" });
-  }
-
-  const message = {
-
-    notification: {
-      title: "🚨 EMERGENCIA",
-      body: "Un vecino ha presionado el botón de emergencia"
-    },
-
-    tokens: tokens
-
-  };
 
   try {
 
-    const response = await admin.messaging().sendEachForMulticast(message);
+    await admin.messaging().subscribeToTopic(token, "alertas");
 
-    console.log("✅ Notificación enviada:", response);
+    console.log("✅ Token registrado:", token);
 
-    res.json({ success: true, response });
+    res.json({
+      ok: true,
+      mensaje: "Token registrado"
+    });
 
   } catch (error) {
 
-    console.error("❌ Error enviando notificación:", error);
+    console.log("❌ Error registrando token:", error);
 
-    res.json({ success: false, error });
+    res.status(500).json({
+      ok: false,
+      error: error.message
+    });
 
   }
 
 });
 
-/* puerto render */
+/* =========================
+   BOTON EMERGENCIA
+========================= */
+
+app.post("/emergency", async (req, res) => {
+
+  try {
+
+    const message = {
+      notification: {
+        title: "🚨 EMERGENCIA",
+        body: "Se ha activado una alerta"
+      },
+      topic: "alertas"
+    };
+
+    const response = await admin.messaging().send(message);
+
+    console.log("✅ Notificación enviada:", response);
+
+    res.json({
+      ok: true,
+      mensaje: "Notificación enviada"
+    });
+
+  } catch (error) {
+
+    console.log("❌ Error enviando emergencia:", error);
+
+    res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+
+  }
+
+});
+
+/* =========================
+   RUTA PRINCIPAL
+========================= */
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/index.html"));
+});
+
+/* =========================
+   INICIAR SERVIDOR
+========================= */
+
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
-
   console.log("🚀 Servidor corriendo en puerto", PORT);
-
 });
