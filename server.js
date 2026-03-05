@@ -39,6 +39,8 @@ try {
     credential: admin.credential.cert(serviceAccount)
   });
 
+   console.log("🔥 Firebase inicializado OK");
+
   firebaseReady = true;
   console.log("✅ Firebase inicializado correctamente");
 
@@ -126,3 +128,4 @@ const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
+
