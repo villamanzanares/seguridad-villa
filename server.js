@@ -7,7 +7,6 @@ const app = express();
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// Inicializar Firebase
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
