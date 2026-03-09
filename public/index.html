@@ -1,39 +1,39 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
 <title>Villa Segura</title>
 
 <style>
+
 body{
-  font-family: Arial, sans-serif;
-  text-align:center;
-  margin-top:60px;
-  background:#f2f2f2;
+font-family:Arial;
+text-align:center;
+margin-top:60px;
+background:#f2f2f2;
 }
 
 button{
-  font-size:24px;
-  padding:20px 40px;
-  border:none;
-  border-radius:10px;
-  margin:10px;
-  cursor:pointer;
+font-size:24px;
+padding:20px 40px;
+border:none;
+border-radius:10px;
+margin:10px;
+cursor:pointer;
 }
 
 .emergency{background:red;color:white;}
 .carabineros{background:green;color:white;}
 .seguridad{background:orange;color:white;}
 
-#status{
-  margin-top:20px;
-  font-size:14px;
-  color:#333;
-}
 </style>
 
 </head>
+
 <body>
 
 <h1>🚨 Villa Segura</h1>
@@ -54,129 +54,119 @@ button{
 🛡 SEGURIDAD
 </button>
 
-<div id="status"></div>
-
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
+import { getMessaging,getToken } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
 
-/* -------------------------
-   CONFIG FIREBASE
-------------------------- */
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-  authDomain: "alerta-rosko.firebaseapp.com",
-  projectId: "alerta-rosko",
-  storageBucket: "alerta-rosko.firebasestorage.app",
-  messagingSenderId: "1022811358317",
-  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+const firebaseConfig={
+apiKey:"AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+authDomain:"alerta-rosko.firebaseapp.com",
+projectId:"alerta-rosko",
+storageBucket:"alerta-rosko.firebasestorage.app",
+messagingSenderId:"1022811358317",
+appId:"1:1022811358317:web:ce210848e7ed63d1412b64"
 };
 
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
+const app=initializeApp(firebaseConfig);
+const messaging=getMessaging(app);
 
-const status = document.getElementById("status");
+/* registrar service worker */
 
-/* -------------------------
-   REGISTRAR SERVICE WORKER
-------------------------- */
+async function iniciar(){
 
-async function iniciarNotificaciones(){
+try{
 
-  try{
+const registration=await navigator.serviceWorker.register("/firebase-messaging-sw.js");
 
-    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+console.log("✅ Service Worker registrado",registration);
 
-    console.log("✅ Service Worker registrado", registration);
+const permiso=await Notification.requestPermission();
 
-    const permiso = await Notification.requestPermission();
+if(permiso!=="granted"){
 
-    if(permiso !== "granted"){
-      status.innerText = "⚠️ Permiso de notificaciones denegado";
-      return;
-    }
+alert("Debes permitir notificaciones");
 
-    const token = await getToken(messaging,{
-      vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-      serviceWorkerRegistration:registration
-    });
-
-    console.log("📱 Token:", token);
-
-    status.innerText = "📱 Dispositivo registrado";
-
-    /* enviar token al backend */
-
-    await fetch("/registrar-token",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({token})
-    });
-
-  }catch(err){
-
-    console.error("❌ Error registrando SW o generando token:",err);
-    status.innerText = "❌ Error registrando notificaciones";
-
-  }
+return;
 
 }
 
-iniciarNotificaciones();
+const token=await getToken(messaging,{
+vapidKey:"TU_VAPID_KEY_AQUI",
+serviceWorkerRegistration:registration
+});
 
-/* -------------------------
-   ENVIAR ALERTA
-------------------------- */
+console.log("📱 Token:",token);
 
-window.enviarAlerta = async function(tipo){
+await fetch("/registrar-token",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({token})
+});
 
-  try{
+}catch(err){
 
-    const res = await fetch("/emergency",{
+console.error("❌ Error:",err);
 
-      method:"POST",
+}
 
-      headers:{
-        "Content-Type":"application/json"
-      },
+}
 
-      body:JSON.stringify({
-        tipo,
-        usuario:{
-          nombre:"Vecino"
-        }
-      })
+iniciar();
 
-    });
+/* enviar alerta */
 
-    const data = await res.json();
+window.enviarAlerta=async function(tipo){
 
-    console.log("respuesta servidor",data);
+if(!navigator.geolocation){
 
-    if(data.success){
+alert("GPS no disponible");
 
-      alert("🚨 Alerta enviada");
+return;
 
-    }else{
+}
 
-      alert("Error enviando "+tipo+": "+data.error);
+navigator.geolocation.getCurrentPosition(async(pos)=>{
 
-    }
+const lat=pos.coords.latitude;
+const lng=pos.coords.longitude;
 
-  }catch(err){
+const res=await fetch("/emergency",{
 
-    console.error(err);
-    alert("Error enviando alerta");
+method:"POST",
 
-  }
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+tipo,
+lat,
+lng
+})
+
+});
+
+const data=await res.json();
+
+if(data.success){
+
+alert("🚨 Alerta enviada");
+
+}else{
+
+alert(data.error);
+
+}
+
+});
 
 }
 
 </script>
 
 </body>
+
 </html>
