@@ -1,10 +1,10 @@
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js?v=3');
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js?v=3');
+const SW_VERSION = Date.now();
+console.log('[SW] Versión dinámica:', SW_VERSION);
 
-const SW_VERSION = 'v3';
-console.log('[SW] Versión:', SW_VERSION);
+// Firebase initialization
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js?v=' + SW_VERSION);
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js?v=' + SW_VERSION);
 
-// Inicializa Firebase
 firebase.initializeApp({
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
@@ -12,7 +12,7 @@ firebase.initializeApp({
   storageBucket: "alerta-rosko.firebasestorage.app",
   messagingSenderId: "1022811358317",
   appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-});;
+});
 
 const messaging = firebase.messaging();
 
@@ -25,9 +25,7 @@ const sonidos = [
 ];
 
 messaging.onBackgroundMessage((payload) => {
-  console.log('[SW] Notificación recibida:', payload);
   const sonidoElegido = sonidos[Math.floor(Math.random() * sonidos.length)];
-
   const notificationTitle = payload.notification?.title || 'Alerta Villa Segura';
   const notificationOptions = {
     body: payload.notification?.body || 'Revisa la aplicación',
@@ -37,7 +35,6 @@ messaging.onBackgroundMessage((payload) => {
     sound: sonidoElegido,
     data: payload.data || {}
   };
-
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
