@@ -50,10 +50,10 @@
     transform: translateY(-3px);
     box-shadow: 0 6px 12px rgba(0,0,0,0.2);
   }
-  #btnEmergencia { background-color: #dc2626; } /* rojo */
-  #btnRobo { background-color: #f59e0b; }       /* naranja */
-  #btnIncendio { background-color: #ef4444; }   /* rojo fuego */
-  #btnAsistencia { background-color: #2563eb; } /* azul */
+  #btnEmergencia { background-color: #dc2626; }
+  #btnRobo { background-color: #f59e0b; }
+  #btnIncendio { background-color: #ef4444; }
+  #btnAsistencia { background-color: #2563eb; }
   footer {
     margin-top: auto;
     padding: 1rem 0;
@@ -72,12 +72,14 @@
   </main>
   <footer id="debug">Estado: listo</footer>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+<!-- Firebase JS con versionado para cache-busting -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js?v=2"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js?v=2"></script>
+
 <script>
 const debug = document.getElementById('debug');
 
-// Inicializar Firebase Messaging
+// Inicializar Firebase
 firebase.initializeApp({
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
@@ -86,6 +88,7 @@ firebase.initializeApp({
   messagingSenderId: "1022811358317",
   appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
 });
+
 const messaging = firebase.messaging();
 
 // Solicitar permiso para notificaciones
@@ -131,6 +134,13 @@ document.getElementById('btnEmergencia').onclick = () => sendAlert('EMERGENCIA')
 document.getElementById('btnRobo').onclick = () => sendAlert('ROBO');
 document.getElementById('btnIncendio').onclick = () => sendAlert('INCENDIO');
 document.getElementById('btnAsistencia').onclick = () => sendAlert('ASISTENCIA');
+
+// Registrar Service Worker con versionado para cache-busting
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('firebase-messaging-sw.js?v=2')
+    .then(reg => console.log('SW registrado con versión 2', reg))
+    .catch(err => console.error('Error registrando SW:', err));
+}
 </script>
 </body>
 </html>
