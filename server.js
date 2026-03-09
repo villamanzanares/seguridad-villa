@@ -1,18 +1,29 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import admin from 'firebase-admin';
-import serviceAccount from './serviceAccountKey.json' assert { type: 'json' };
+import fs from 'fs';
+import path from 'path';
+
+// Configurar __dirname para ES Modules
+const __dirname = path.resolve();
+
+// Leer serviceAccountKey.json de forma robusta
+const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
 
 const app = express();
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
+// Inicializar Firebase Admin
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
+// Endpoint para enviar alertas
 app.post('/send-alert', async (req, res) => {
   const { type, latitude, longitude } = req.body;
+
   if (!type || !latitude || !longitude) {
     return res.status(400).json({ success: false, message: 'Datos incompletos' });
   }
@@ -36,4 +47,6 @@ app.post('/send-alert', async (req, res) => {
   }
 });
 
-app.listen(8080, () => console.log('Servidor corriendo en puerto 8080'));
+// Iniciar servidor
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
