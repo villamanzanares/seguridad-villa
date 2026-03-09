@@ -6,7 +6,7 @@
 <title>Villa Segura - Alertas Vecinales</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  body { font-family: 'Roboto', sans-serif; margin:0; padding:0; background:linear-gradient(135deg,#f0f4f8,#d9e2ec); display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:100vh; color:#1f2937; }
+  body { font-family:'Roboto',sans-serif; margin:0; padding:0; background:linear-gradient(135deg,#f0f4f8,#d9e2ec); display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:100vh; color:#1f2937; }
   header { width:100%; padding:1rem 0; background-color:#0f172a; color:#fff; text-align:center; font-size:1.8rem; font-weight:700; box-shadow:0 2px 6px rgba(0,0,0,0.2); }
   main { margin-top:2rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1.2rem; width:90%; max-width:500px; }
   button { padding:1.5rem; font-size:1rem; font-weight:700; border:none; border-radius:12px; color:#fff; cursor:pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow:0 4px 8px rgba(0,0,0,0.15); }
@@ -19,18 +19,18 @@
 </style>
 </head>
 <body>
-  <header>Villa Segura 🚨</header>
-  <main>
-    <button id="btnEmergencia">EMERGENCIA</button>
-    <button id="btnRobo">ROBO</button>
-    <button id="btnIncendio">INCENDIO</button>
-    <button id="btnAsistencia">ASISTENCIA</button>
-  </main>
-  <footer id="debug">Estado: listo | versión v3</footer>
+<header>Villa Segura 🚨</header>
+<main>
+  <button id="btnEmergencia">EMERGENCIA</button>
+  <button id="btnRobo">ROBO</button>
+  <button id="btnIncendio">INCENDIO</button>
+  <button id="btnAsistencia">ASISTENCIA</button>
+</main>
+<footer id="debug">Estado: listo | versión dinámica</footer>
 
-<!-- Firebase JS con versionado para cache-busting -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js?v=3"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js?v=3"></script>
+<!-- Firebase JS -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 
 <script>
 const debug = document.getElementById('debug');
@@ -43,15 +43,15 @@ firebase.initializeApp({
   storageBucket: "alerta-rosko.firebasestorage.app",
   messagingSenderId: "1022811358317",
   appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-});;
+});
 
 const messaging = firebase.messaging();
 
 // Solicitar permiso para notificaciones
 messaging.requestPermission()
   .then(() => messaging.getToken())
-  .then((token) => console.log('Token del dispositivo:', token))
-  .catch((err) => console.error('Error obteniendo token:', err));
+  .then(token => console.log('Token del dispositivo:', token))
+  .catch(err => console.error('Error obteniendo token:', err));
 
 const sendAlert = async (type) => {
   debug.textContent = `Estado: obteniendo ubicación para ${type}...`;
@@ -71,11 +71,9 @@ const sendAlert = async (type) => {
         body: JSON.stringify({ type, latitude, longitude })
       });
       const data = await res.json();
-      if (data.success) {
-        debug.textContent = `✅ Alerta ${type} enviada correctamente (ID: ${data.messageId})`;
-      } else {
-        debug.textContent = `❌ Error al enviar alerta: ${data.error || data.message}`;
-      }
+      debug.textContent = data.success 
+        ? `✅ Alerta ${type} enviada correctamente (ID: ${data.messageId})`
+        : `❌ Error al enviar alerta: ${data.error || data.message}`;
     } catch (err) {
       console.error(err);
       debug.textContent = `❌ Error al enviar alerta: ${err.message}`;
@@ -91,12 +89,21 @@ document.getElementById('btnRobo').onclick = () => sendAlert('ROBO');
 document.getElementById('btnIncendio').onclick = () => sendAlert('INCENDIO');
 document.getElementById('btnAsistencia').onclick = () => sendAlert('ASISTENCIA');
 
-// Registrar Service Worker con versionado
+// Registrar SW auto-busting
 if ('serviceWorker' in navigator) {
-  const SW_VERSION = 'v3';
+  const SW_VERSION = Date.now();
   navigator.serviceWorker.register(`firebase-messaging-sw.js?v=${SW_VERSION}`)
-    .then(reg => console.log(`SW registrado con versión ${SW_VERSION}`, reg))
+    .then(reg => console.log(`SW registrado con versión: ${SW_VERSION}`, reg))
     .catch(err => console.error('Error registrando SW:', err));
+
+  // Limpiar SW antiguos automáticamente
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => {
+      if (r.active && !r.active.scriptURL.includes(SW_VERSION)) {
+        r.unregister().then(() => console.log('SW antiguo eliminado'));
+      }
+    });
+  });
 }
 </script>
 </body>
