@@ -12,54 +12,7 @@
 
 body{
 font-family:Arial;
-text-align:center;importScripts("https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js");
-
-firebase.initializeApp({
-apiKey:"AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-authDomain:"alerta-rosko.firebaseapp.com",
-projectId:"alerta-rosko",
-messagingSenderId:"1022811358317",
-appId:"1:1022811358317:web:ce210848e7ed63d1412b64"
-});
-
-const messaging=firebase.messaging();
-
-messaging.onBackgroundMessage(function(payload){
-
-console.log("📩 mensaje recibido",payload);
-
-const notificationTitle=payload.notification.title;
-
-const notificationOptions={
-body:payload.notification.body,
-icon:"/icon.png",
-vibrate:[200,100,200,100,200],
-requireInteraction:true,
-data:{
-mapa:payload.data?.mapa
-}
-};
-
-self.registration.showNotification(notificationTitle,notificationOptions);
-
-});
-
-self.addEventListener("notificationclick",function(event){
-
-const mapa=event.notification.data?.mapa;
-
-event.notification.close();
-
-if(mapa){
-
-event.waitUntil(
-clients.openWindow(mapa)
-);
-
-}
-
-});
+text-align:center;
 margin-top:60px;
 background:#f2f2f2;
 }
@@ -76,6 +29,20 @@ cursor:pointer;
 .emergency{background:red;color:white;}
 .carabineros{background:green;color:white;}
 .seguridad{background:orange;color:white;}
+
+#debug{
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+background:black;
+color:#00ff9c;
+font-size:12px;
+padding:10px;
+max-height:200px;
+overflow:auto;
+z-index:9999;
+}
 
 </style>
 
@@ -101,6 +68,10 @@ cursor:pointer;
 🛡 SEGURIDAD
 </button>
 
+<div id="debug">
+DEBUG:
+</div>
+
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
@@ -118,17 +89,31 @@ appId:"1:1022811358317:web:ce210848e7ed63d1412b64"
 const app=initializeApp(firebaseConfig);
 const messaging=getMessaging(app);
 
-/* registrar service worker */
+function logDebug(msg){
+
+const box=document.getElementById("debug");
+
+box.innerHTML+="<br>"+msg;
+
+console.log(msg);
+
+}
+
+/* iniciar app */
 
 async function iniciar(){
 
 try{
 
+logDebug("Iniciando app...");
+
 const registration=await navigator.serviceWorker.register("/firebase-messaging-sw.js");
 
-console.log("✅ Service Worker registrado",registration);
+logDebug("Service Worker registrado");
 
 const permiso=await Notification.requestPermission();
+
+logDebug("Permiso notificaciones: "+permiso);
 
 if(permiso!=="granted"){
 
@@ -143,19 +128,25 @@ vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_Q
 serviceWorkerRegistration:registration
 });
 
-console.log("📱 Token:",token);
+logDebug("TOKEN: "+token);
 
 await fetch("/registrar-token",{
+
 method:"POST",
+
 headers:{
 "Content-Type":"application/json"
 },
+
 body:JSON.stringify({token})
+
 });
+
+logDebug("Token enviado al servidor");
 
 }catch(err){
 
-console.error("❌ Error:",err);
+logDebug("ERROR: "+err);
 
 }
 
@@ -166,6 +157,8 @@ iniciar();
 /* enviar alerta */
 
 window.enviarAlerta=async function(tipo){
+
+logDebug("Enviando alerta: "+tipo);
 
 if(!navigator.geolocation){
 
@@ -179,6 +172,8 @@ navigator.geolocation.getCurrentPosition(async(pos)=>{
 
 const lat=pos.coords.latitude;
 const lng=pos.coords.longitude;
+
+logDebug("GPS: "+lat+","+lng);
 
 const res=await fetch("/emergency",{
 
@@ -202,9 +197,13 @@ if(data.success){
 
 alert("🚨 Alerta enviada");
 
+logDebug("Alerta enviada correctamente");
+
 }else{
 
 alert(data.error);
+
+logDebug("Error servidor");
 
 }
 
