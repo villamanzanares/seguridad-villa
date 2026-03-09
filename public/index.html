@@ -72,8 +72,27 @@
   </main>
   <footer id="debug">Estado: listo</footer>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 <script>
 const debug = document.getElementById('debug');
+
+// Inicializar Firebase Messaging
+firebase.initializeApp({
+  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+  authDomain: "alerta-rosko.firebaseapp.com",
+  projectId: "alerta-rosko",
+  storageBucket: "alerta-rosko.firebasestorage.app",
+  messagingSenderId: "1022811358317",
+  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+});
+const messaging = firebase.messaging();
+
+// Solicitar permiso para notificaciones
+messaging.requestPermission()
+  .then(() => messaging.getToken())
+  .then((token) => console.log('Token del dispositivo:', token))
+  .catch((err) => console.error('Error obteniendo token:', err));
 
 const sendAlert = async (type) => {
   debug.textContent = `Estado: obteniendo ubicación para ${type}...`;
