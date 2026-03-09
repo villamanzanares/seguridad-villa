@@ -75,7 +75,7 @@ DEBUG:
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
 
 const firebaseConfig={
 apiKey:"AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
@@ -154,6 +154,22 @@ logDebug("ERROR: "+err);
 }
 
 iniciar();
+
+/* recibir notificaciones cuando la app está abierta */
+
+onMessage(messaging,(payload)=>{
+
+logDebug("📩 Notificación recibida en primer plano");
+
+const titulo=payload.notification.title;
+const cuerpo=payload.notification.body;
+
+new Notification(titulo,{
+body:cuerpo,
+icon:"/icon.png"
+});
+
+});
 
 /* enviar alerta */
 
