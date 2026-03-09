@@ -34,6 +34,8 @@ console.error("❌ Error inicializando Firebase:",error);
 
 }
 
+/* almacenamiento simple de tokens */
+
 const tokens=new Set();
 
 /* registrar dispositivos */
@@ -51,6 +53,7 @@ return res.json({success:false});
 tokens.add(token);
 
 console.log("📱 Token registrado:",token);
+console.log("📊 Total dispositivos:",tokens.size);
 
 res.json({
 success:true,
@@ -90,19 +93,25 @@ const mapa=lat&&lng
 :"";
 
 const message={
-notification:{
-title:"🚨 ALERTA VECINAL",
-body:`Un vecino activó ${tipo}`
-},
 data:{
+title:"🚨 ALERTA VECINAL",
+body:`Un vecino activó ${tipo}`,
 mapa
 },
 tokens:Array.from(tokens)
 };
 
+console.log("🚨 Enviando alerta a",tokens.size,"dispositivos");
+
 const response=await admin.messaging().sendEachForMulticast(message);
 
 console.log("📢 Notificaciones enviadas:",response.successCount);
+
+if(response.failureCount>0){
+
+console.log("⚠️ Fallos:",response.failureCount);
+
+}
 
 res.json({
 success:true,
