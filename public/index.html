@@ -75,7 +75,7 @@ DEBUG:
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getMessaging,getToken } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
 
 const firebaseConfig={
 apiKey:"AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
@@ -92,9 +92,7 @@ const messaging=getMessaging(app);
 function logDebug(msg){
 
 const box=document.getElementById("debug");
-
 box.innerHTML+="<br>"+msg;
-
 console.log(msg);
 
 }
@@ -107,23 +105,28 @@ try{
 
 logDebug("Iniciando app...");
 
-const registration=await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
 
 logDebug("Service Worker registrado");
 
-const permiso=await Notification.requestPermission();
+/* esperar a que el service worker esté activo */
+
+await navigator.serviceWorker.ready;
+
+logDebug("Service Worker activo");
+
+const permiso = await Notification.requestPermission();
 
 logDebug("Permiso notificaciones: "+permiso);
 
 if(permiso!=="granted"){
 
 alert("Debes permitir notificaciones");
-
 return;
 
 }
 
-const token=await getToken(messaging,{
+const token = await getToken(messaging,{
 vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
 serviceWorkerRegistration:registration
 });
@@ -133,11 +136,9 @@ logDebug("TOKEN: "+token);
 await fetch("/registrar-token",{
 
 method:"POST",
-
 headers:{
 "Content-Type":"application/json"
 },
-
 body:JSON.stringify({token})
 
 });
@@ -156,33 +157,30 @@ iniciar();
 
 /* enviar alerta */
 
-window.enviarAlerta=async function(tipo){
+window.enviarAlerta = async function(tipo){
 
 logDebug("Enviando alerta: "+tipo);
 
 if(!navigator.geolocation){
 
 alert("GPS no disponible");
-
 return;
 
 }
 
 navigator.geolocation.getCurrentPosition(async(pos)=>{
 
-const lat=pos.coords.latitude;
-const lng=pos.coords.longitude;
+const lat = pos.coords.latitude;
+const lng = pos.coords.longitude;
 
 logDebug("GPS: "+lat+","+lng);
 
-const res=await fetch("/emergency",{
+const res = await fetch("/emergency",{
 
 method:"POST",
-
 headers:{
 "Content-Type":"application/json"
 },
-
 body:JSON.stringify({
 tipo,
 lat,
@@ -191,18 +189,16 @@ lng
 
 });
 
-const data=await res.json();
+const data = await res.json();
 
 if(data.success){
 
 alert("🚨 Alerta enviada");
-
 logDebug("Alerta enviada correctamente");
 
 }else{
 
 alert(data.error);
-
 logDebug("Error servidor");
 
 }
