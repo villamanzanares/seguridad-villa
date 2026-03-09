@@ -13,35 +13,46 @@
 body{
 font-family:Arial;
 text-align:center;
-margin-top:60px;
-background:#f2f2f2;
+background:#111;
+color:white;
+margin:0;
+padding:20px;
+}
+
+h1{
+margin-bottom:30px;
 }
 
 button{
-font-size:24px;
-padding:20px 40px;
-border:none;
-border-radius:10px;
+
+width:90%;
+max-width:400px;
+
+padding:20px;
+
 margin:10px;
+
+font-size:20px;
+
+border:none;
+
+border-radius:10px;
+
 cursor:pointer;
+
 }
 
-.emergency{background:red;color:white;}
-.carabineros{background:green;color:white;}
-.seguridad{background:orange;color:white;}
+.emergencia{background:#ff0033;}
+.robo{background:#ff7a00;}
+.incendio{background:#ff0000;}
+.asistencia{background:#0066ff;}
 
 #debug{
-position:fixed;
-bottom:0;
-left:0;
-width:100%;
-background:black;
-color:#00ff9c;
+margin-top:30px;
 font-size:12px;
+background:#000;
 padding:10px;
-max-height:200px;
-overflow:auto;
-z-index:9999;
+text-align:left;
 }
 
 </style>
@@ -52,174 +63,161 @@ z-index:9999;
 
 <h1>🚨 Villa Segura</h1>
 
-<button class="emergency" onclick="enviarAlerta('EMERGENCIA')">
+<button class="emergencia" onclick="botonEmergencia()">
 🚨 EMERGENCIA
 </button>
 
-<br>
-
-<button class="carabineros" onclick="enviarAlerta('CARABINEROS')">
-🚓 CARABINEROS
+<button class="robo" onclick="botonRobo()">
+🚔 ROBO
 </button>
 
-<br>
-
-<button class="seguridad" onclick="enviarAlerta('SEGURIDAD')">
-🛡 SEGURIDAD
+<button class="incendio" onclick="botonIncendio()">
+🔥 INCENDIO
 </button>
 
-<div id="debug">
-DEBUG:
-</div>
+<button class="asistencia" onclick="botonAsistencia()">
+🆘 ASISTENCIA
+</button>
 
-<script type="module">
+<div id="debug"></div>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"></script>
 
-const firebaseConfig={
-apiKey:"AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-authDomain:"alerta-rosko.firebaseapp.com",
-projectId:"alerta-rosko",
-storageBucket:"alerta-rosko.firebasestorage.app",
-messagingSenderId:"1022811358317",
-appId:"1:1022811358317:web:ce210848e7ed63d1412b64"
-};
+<script>
 
-const app=initializeApp(firebaseConfig);
-const messaging=getMessaging(app);
-
-function logDebug(msg){
-
-const box=document.getElementById("debug");
-box.innerHTML+="<br>"+msg;
-console.log(msg);
-
+function log(txt){
+document.getElementById("debug").innerHTML += txt + "<br>";
+console.log(txt);
 }
 
-/* iniciar app */
+log("Iniciando app...");
+
+const firebaseConfig = {
+
+apiKey:"AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+
+authDomain:"alerta-rosko.firebaseapp.com",
+
+projectId:"alerta-rosko",
+
+messagingSenderId:"1022811358317",
+
+appId:"1:1022811358317:web:ce210848e7ed63d1412b64"
+
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const messaging = firebase.messaging();
 
 async function iniciar(){
 
-try{
+const permiso = await Notification.requestPermission();
 
-logDebug("Iniciando app...");
+log("Permiso notificaciones: "+permiso);
+
+if(permiso!=="granted") return;
 
 const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
 
-logDebug("Service Worker registrado");
+log("Service Worker registrado");
 
-/* esperar a que el service worker esté activo */
-
-await navigator.serviceWorker.ready;
-
-logDebug("Service Worker activo");
-
-const permiso = await Notification.requestPermission();
-
-logDebug("Permiso notificaciones: "+permiso);
-
-if(permiso!=="granted"){
-
-alert("Debes permitir notificaciones");
-return;
-
-}
-
-const token = await getToken(messaging,{
-vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+const token = await messaging.getToken({
 serviceWorkerRegistration:registration
 });
 
-logDebug("TOKEN: "+token);
+log("TOKEN: "+token);
 
-await fetch("/registrar-token",{
+await fetch("/guardar-token",{
 
 method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
+
+headers:{"Content-Type":"application/json"},
+
 body:JSON.stringify({token})
 
 });
 
-logDebug("Token enviado al servidor");
-
-}catch(err){
-
-logDebug("ERROR: "+err);
-
-}
+log("Token enviado al servidor");
 
 }
 
 iniciar();
 
-/* recibir notificaciones cuando la app está abierta */
-
-onMessage(messaging,(payload)=>{
-
-logDebug("📩 Notificación recibida en primer plano");
-
-const titulo=payload.notification.title;
-const cuerpo=payload.notification.body;
-
-new Notification(titulo,{
-body:cuerpo,
-icon:"/icon.png"
-});
-
-});
-
-/* enviar alerta */
-
-window.enviarAlerta = async function(tipo){
-
-logDebug("Enviando alerta: "+tipo);
+async function enviarAlerta(tipo){
 
 if(!navigator.geolocation){
 
 alert("GPS no disponible");
+
 return;
 
 }
 
-navigator.geolocation.getCurrentPosition(async(pos)=>{
+navigator.geolocation.getCurrentPosition(async pos=>{
 
-const lat = pos.coords.latitude;
-const lng = pos.coords.longitude;
+const lat=pos.coords.latitude;
 
-logDebug("GPS: "+lat+","+lng);
+const lng=pos.coords.longitude;
 
-const res = await fetch("/emergency",{
+log("Enviando alerta: "+tipo);
+
+log("GPS: "+lat+","+lng);
+
+await fetch("/alerta",{
 
 method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
+
+headers:{"Content-Type":"application/json"},
+
 body:JSON.stringify({
+
 tipo,
+
 lat,
+
 lng
+
 })
 
 });
 
-const data = await res.json();
+log("Alerta enviada");
 
-if(data.success){
-
-alert("🚨 Alerta enviada");
-logDebug("Alerta enviada correctamente");
-
-}else{
-
-alert(data.error);
-logDebug("Error servidor");
+});
 
 }
 
-});
+/* BOTONES */
+
+function botonEmergencia(){
+
+enviarAlerta("EMERGENCIA");
+
+}
+
+function botonRobo(){
+
+enviarAlerta("ROBO");
+
+window.location.href="tel:133";
+
+}
+
+function botonIncendio(){
+
+enviarAlerta("INCENDIO");
+
+window.location.href="tel:132";
+
+}
+
+function botonAsistencia(){
+
+enviarAlerta("ASISTENCIA");
+
+window.location.href="tel:131";
 
 }
 
