@@ -1,31 +1,48 @@
 importScripts("https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js");
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-  authDomain: "alerta-rosko.firebaseapp.com",
-  projectId: "alerta-rosko",
-  storageBucket: "alerta-rosko.firebasestorage.app",
-  messagingSenderId: "1022811358317",
-  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+firebase.initializeApp({
+apiKey:"AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+authDomain:"alerta-rosko.firebaseapp.com",
+projectId:"alerta-rosko",
+messagingSenderId:"1022811358317",
+appId:"1:1022811358317:web:ce210848e7ed63d1412b64"
+});
+
+const messaging=firebase.messaging();
+
+messaging.onBackgroundMessage(function(payload){
+
+console.log("📩 mensaje recibido",payload);
+
+const notificationTitle=payload.notification.title;
+
+const notificationOptions={
+body:payload.notification.body,
+icon:"/icon.png",
+vibrate:[200,100,200,100,200],
+requireInteraction:true,
+data:{
+mapa:payload.data?.mapa
+}
 };
 
-firebase.initializeApp(firebaseConfig);
+self.registration.showNotification(notificationTitle,notificationOptions);
 
-const messaging = firebase.messaging();
+});
 
-messaging.onBackgroundMessage(function(payload) {
+self.addEventListener("notificationclick",function(event){
 
-  console.log("📩 Mensaje recibido en background:", payload);
+const mapa=event.notification.data?.mapa;
 
-  const notificationTitle = payload.notification?.title || "🚨 Alerta";
-  
-  const notificationOptions = {
-    body: payload.notification?.body || "Nueva alerta vecinal",
-    icon: "/favicon.ico",
-    vibrate: [200,100,200]
-  };
+event.notification.close();
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+if(mapa){
+
+event.waitUntil(
+clients.openWindow(mapa)
+);
+
+}
 
 });
