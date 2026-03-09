@@ -1,110 +1,144 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Villa Segura - Alertas Vecinales</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-<style>
-  body { font-family:'Roboto',sans-serif; margin:0; padding:0; background:linear-gradient(135deg,#f0f4f8,#d9e2ec); display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:100vh; color:#1f2937; }
-  header { width:100%; padding:1rem 0; background-color:#0f172a; color:#fff; text-align:center; font-size:1.8rem; font-weight:700; box-shadow:0 2px 6px rgba(0,0,0,0.2); }
-  main { margin-top:2rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1.2rem; width:90%; max-width:500px; }
-  button { padding:1.5rem; font-size:1rem; font-weight:700; border:none; border-radius:12px; color:#fff; cursor:pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow:0 4px 8px rgba(0,0,0,0.15); }
-  button:hover { transform: translateY(-3px); box-shadow:0 6px 12px rgba(0,0,0,0.15); }
-  #btnEmergencia { background-color:#dc2626; }
-  #btnRobo { background-color:#f59e0b; }
-  #btnIncendio { background-color:#ef4444; }
-  #btnAsistencia { background-color:#ef4444; }
-  footer { margin-top:auto; padding:1rem 0; font-size:0.85rem; color:#64748b; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Villa Segura</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #d32f2f;
+      margin-bottom: 20px;
+    }
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 150px);
+      grid-gap: 20px;
+      margin-bottom: 30px;
+    }
+    button {
+      padding: 15px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      color: #fff;
+      transition: transform 0.1s;
+    }
+    button:active {
+      transform: scale(0.95);
+    }
+    #emergencia { background: #d32f2f; }
+    #robo       { background: #f57c00; }
+    #incendio   { background: #fbc02d; color: #000; }
+    #asistencia { background: #1976d2; }
+    #footer {
+      font-size: 0.9rem;
+      color: #333;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-<header>Villa Segura 🚨</header>
-<main>
-  <button id="btnEmergencia">EMERGENCIA</button>
-  <button id="btnRobo">ROBO</button>
-  <button id="btnIncendio">INCENDIO</button>
-  <button id="btnAsistencia">ASISTENCIA</button>
-</main>
-<footer id="debug">Estado: listo | versión dinámica</footer>
+  <h1>Villa Segura 🚨</h1>
+  <div class="buttons">
+    <button id="emergencia">EMERGENCIA</button>
+    <button id="robo">ROBO</button>
+    <button id="incendio">INCENDIO</button>
+    <button id="asistencia">ASISTENCIA</button>
+  </div>
+  <div id="footer">Estado: inicializando...</div>
 
-<!-- Firebase JS -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging.js";
 
-<script>
-const debug = document.getElementById('debug');
+    // Configuración Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+      authDomain: "alerta-rosko.firebaseapp.com",
+      projectId: "alerta-rosko",
+      storageBucket: "alerta-rosko.appspot.com",
+      messagingSenderId: "1022811358317",
+      appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+    };
 
-// Inicializar Firebase
-firebase.initializeApp({
-  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-  authDomain: "alerta-rosko.firebaseapp.com",
-  projectId: "alerta-rosko",
-  storageBucket: "alerta-rosko.firebasestorage.app",
-  messagingSenderId: "1022811358317",
-  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-});
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
 
-const messaging = firebase.messaging();
+    // Registrar token FCM
+    async function initFCM() {
+      try {
+        const token = await getToken(messaging, { vapidKey: "TU_VAPID_KEY_AQUI" });
+        console.log("Token FCM:", token);
+        document.getElementById("footer").innerText = "Token FCM registrado ✅";
 
-// Solicitar permiso para notificaciones
-messaging.requestPermission()
-  .then(() => messaging.getToken())
-  .then(token => console.log('Token del dispositivo:', token))
-  .catch(err => console.error('Error obteniendo token:', err));
+        // Puedes enviar el token a tu servidor aquí si quieres
+        // await fetch('/register-token', { method: 'POST', body: JSON.stringify({ token }) });
 
-const sendAlert = async (type) => {
-  debug.textContent = `Estado: obteniendo ubicación para ${type}...`;
-  if (!navigator.geolocation) {
-    alert('Geolocalización no soportada');
-    debug.textContent = 'Estado: error, geolocalización no soportada';
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(async (position) => {
-    const { latitude, longitude } = position.coords;
-    debug.textContent = `Estado: enviando alerta ${type}...`;
-    try {
-      const res = await fetch('/send-alert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, latitude, longitude })
-      });
-      const data = await res.json();
-      debug.textContent = data.success 
-        ? `✅ Alerta ${type} enviada correctamente (ID: ${data.messageId})`
-        : `❌ Error al enviar alerta: ${data.error || data.message}`;
-    } catch (err) {
-      console.error(err);
-      debug.textContent = `❌ Error al enviar alerta: ${err.message}`;
-    }
-  }, (err) => {
-    alert('Error obteniendo ubicación: ' + err.message);
-    debug.textContent = '❌ Error obteniendo ubicación';
-  });
-};
-
-document.getElementById('btnEmergencia').onclick = () => sendAlert('EMERGENCIA');
-document.getElementById('btnRobo').onclick = () => sendAlert('ROBO');
-document.getElementById('btnIncendio').onclick = () => sendAlert('INCENDIO');
-document.getElementById('btnAsistencia').onclick = () => sendAlert('ASISTENCIA');
-
-// Registrar SW auto-busting
-if ('serviceWorker' in navigator) {
-  const SW_VERSION = Date.now();
-  navigator.serviceWorker.register(`firebase-messaging-sw.js?v=${SW_VERSION}`)
-    .then(reg => console.log(`SW registrado con versión: ${SW_VERSION}`, reg))
-    .catch(err => console.error('Error registrando SW:', err));
-
-  // Limpiar SW antiguos automáticamente
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(r => {
-      if (r.active && !r.active.scriptURL.includes(SW_VERSION)) {
-        r.unregister().then(() => console.log('SW antiguo eliminado'));
+      } catch (err) {
+        console.error("No se pudo obtener el token FCM:", err);
+        document.getElementById("footer").innerText = "Error registrando token ❌";
       }
+    }
+
+    initFCM();
+
+    // Escuchar mensajes push mientras la app está abierta
+    onMessage(messaging, (payload) => {
+      console.log('Notificación recibida:', payload);
+      document.getElementById("footer").innerText = `Notificación: ${payload.notification.title}`;
+      reproducirSonido(payload.data?.type);
     });
-  });
-}
-</script>
+
+    // Sonidos
+    const sonidos = {
+      emergencia: new Audio("./sounds/emergencia.wav"),
+      robo: new Audio("./sounds/policia.wav"),
+      incendio: new Audio("./sounds/sirena.mp3"),
+      asistencia: new Audio("./sounds/ambulancia.wav")
+    };
+
+    function reproducirSonido(tipo) {
+      if (sonidos[tipo]) {
+        sonidos[tipo].currentTime = 0;
+        sonidos[tipo].play().catch(e => console.warn("No se pudo reproducir el sonido:", e));
+      }
+    }
+
+    // Botones
+    const botones = ["emergencia", "robo", "incendio", "asistencia"];
+    botones.forEach(id => {
+      document.getElementById(id).addEventListener("click", async () => {
+        document.getElementById("footer").innerText = `Enviando alerta ${id}...`;
+        reproducirSonido(id);
+
+        try {
+          const res = await fetch("/send-alert", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: id, latitude: 0, longitude: 0 }) // agrega coordenadas reales si quieres
+          });
+          const data = await res.json();
+          document.getElementById("footer").innerText = `Alerta ${id} enviada ✅ ID: ${data.messageId || "SIMULADO"}`;
+        } catch (err) {
+          console.error(err);
+          document.getElementById("footer").innerText = `Error enviando alerta ❌`;
+        }
+      });
+    });
+  </script>
 </body>
 </html>
