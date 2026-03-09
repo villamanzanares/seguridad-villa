@@ -13,7 +13,6 @@ admin.initializeApp({
 
 app.post('/send-alert', async (req, res) => {
   const { type, latitude, longitude } = req.body;
-
   if (!type || !latitude || !longitude) {
     return res.status(400).json({ success: false, message: 'Datos incompletos' });
   }
