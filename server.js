@@ -1,26 +1,44 @@
 import express from "express";
 import admin from "firebase-admin";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-/* -------------------------
+/* --------------------------------
+   RUTA DEL DIRECTORIO
+-------------------------------- */
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/* --------------------------------
+   SERVIR FRONTEND
+-------------------------------- */
+
+app.use(express.static(path.join(__dirname, "public")));
+
+/* --------------------------------
    INICIALIZAR FIREBASE
-------------------------- */
+-------------------------------- */
 
 let firebaseReady = false;
 
 try {
 
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  const serviceAccount = JSON.parse(
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+  );
 
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
 
   firebaseReady = true;
+
   console.log("🔥 Firebase inicializado correctamente");
 
 } catch (error) {
@@ -29,9 +47,9 @@ try {
 
 }
 
-/* -------------------------
-   TOKENS
-------------------------- */
+/* --------------------------------
+   ALMACENAR TOKENS
+-------------------------------- */
 
 const tokens = new Set();
 
@@ -40,20 +58,23 @@ app.post("/registrar-token", (req, res) => {
   const { token } = req.body;
 
   if (!token) {
-    return res.json({ success: false });
+    return res.json({ success: false, error: "Token vacío" });
   }
 
   tokens.add(token);
 
   console.log("📱 Token registrado:", token);
 
-  res.json({ success: true });
+  res.json({
+    success: true,
+    totalTokens: tokens.size
+  });
 
 });
 
-/* -------------------------
-   ALERTA
-------------------------- */
+/* --------------------------------
+   ALERTA DE EMERGENCIA
+-------------------------------- */
 
 app.post("/emergency", async (req, res) => {
 
@@ -74,9 +95,10 @@ app.post("/emergency", async (req, res) => {
       tokens: Array.from(tokens)
     };
 
-    const response = await admin.messaging().sendEachForMulticast(message);
+    const response =
+      await admin.messaging().sendEachForMulticast(message);
 
-    console.log("📢 Enviadas:", response.successCount);
+    console.log("📢 Notificaciones enviadas:", response.successCount);
 
     res.json({
       success: true,
@@ -96,12 +118,24 @@ app.post("/emergency", async (req, res) => {
 
 });
 
-/* -------------------------
+/* --------------------------------
+   RUTA PRINCIPAL
+-------------------------------- */
+
+app.get("/", (req, res) => {
+
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+
+});
+
+/* --------------------------------
    SERVIDOR
-------------------------- */
+-------------------------------- */
 
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
+
   console.log("🚀 Servidor corriendo en puerto", PORT);
+
 });
