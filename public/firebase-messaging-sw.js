@@ -11,15 +11,31 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+/* instalar service worker */
+
+self.addEventListener("install", (event) => {
+  console.log("Service Worker instalado");
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  console.log("Service Worker activo");
+});
+
+/* recibir mensaje */
+
 messaging.onBackgroundMessage(function(payload) {
 
-  console.log("📩 Mensaje recibido en background:", payload);
+  console.log("📩 Mensaje recibido:", payload);
 
   const notificationTitle = payload.notification?.title || "🚨 Alerta";
-  
+
   const notificationOptions = {
-    body: payload.notification?.body || "Se ha enviado una alerta",
+
+    body: payload.notification?.body || "Se envió una alerta",
+
     icon: "/icon.png",
+
     badge: "/icon.png",
 
     vibrate: [200,100,200,100,200],
@@ -27,14 +43,16 @@ messaging.onBackgroundMessage(function(payload) {
     requireInteraction: true,
 
     data: {
-      mapa: payload.data?.mapa || null
+      mapa: payload.data?.mapa
     }
+
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 
 });
 
+/* click en notificación */
 
 self.addEventListener("notificationclick", function(event) {
 
