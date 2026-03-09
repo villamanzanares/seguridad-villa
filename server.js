@@ -1,89 +1,41 @@
-const express = require("express");
-const admin = require("firebase-admin");
-const bodyParser = require("body-parser");
-const path = require("path");
+import express from 'express';
+import bodyParser from 'body-parser';
+import admin from 'firebase-admin';
+import serviceAccount from './serviceAccountKey.json' assert { type: 'json' };
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(bodyParser.json());
-app.use(express.static("public"));
+app.use(express.static('public'));
 
-/* FIREBASE ADMIN */
-
-const serviceAccount = require("./serviceAccountKey.json");
-
+// Inicializar Firebase
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-const tokens = new Set();
+app.post('/send-alert', async (req, res) => {
+  const { type, latitude, longitude } = req.body;
 
-/* GUARDAR TOKEN */
-
-app.post("/guardar-token", (req, res) => {
-
-  const { token } = req.body;
-
-  if (!token) {
-    return res.status(400).send("Token inválido");
+  if (!type || !latitude || !longitude) {
+    return res.status(400).json({ success: false, message: 'Datos incompletos' });
   }
-
-  tokens.add(token);
-
-  console.log("📱 Token registrado:", token);
-
-  res.send("Token guardado");
-});
-
-/* ENVIAR ALERTA */
-
-app.post("/alerta", async (req, res) => {
-
-  const { tipo, lat, lng } = req.body;
-
-  console.log("🚨 Alerta recibida:", tipo);
-  console.log("📍 GPS:", lat, lng);
-
-  const mapa = `https://www.google.com/maps?q=${lat},${lng}`;
 
   const message = {
     notification: {
-      title: "🚨 ALERTA VECINAL",
-      body: `${tipo} cerca de tu ubicación`
+      title: `Alerta: ${type}`,
+      body: `Ubicación: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
     },
-
-    data: {
-      mapa: mapa
-    },
-
-    tokens: Array.from(tokens)
+    topic: 'vecinos',
+    data: { type, latitude: latitude.toString(), longitude: longitude.toString() }
   };
 
   try {
-
-    const response = await admin.messaging().sendEachForMulticast(message);
-
-    console.log("📢 Notificaciones enviadas:", response.successCount);
-
-    res.send("Alerta enviada");
-
+    const response = await admin.messaging().send(message);
+    console.log(`Alerta ${type} enviada:`, response);
+    res.json({ success: true, messageId: response });
   } catch (error) {
-
-    console.error("❌ Error enviando alerta:", error);
-
-    res.status(500).send("Error enviando alerta");
-
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });
   }
-
 });
 
-/* CARGAR APP */
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-app.listen(PORT, () => {
-  console.log("🚀 Servidor iniciado en puerto", PORT);
-});
+app.listen(8080, () => console.log('Servidor corriendo en puerto 8080'));
