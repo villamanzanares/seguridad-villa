@@ -5,137 +5,135 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const app = express();
+
 app.use(express.json());
 app.use(cors());
-
-/* --------------------------------
-   RUTA DEL DIRECTORIO
--------------------------------- */
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/* --------------------------------
-   SERVIR FRONTEND
--------------------------------- */
+app.use(express.static(path.join(__dirname,"public")));
 
-app.use(express.static(path.join(__dirname, "public")));
+let firebaseReady=false;
 
-/* --------------------------------
-   INICIALIZAR FIREBASE
--------------------------------- */
+try{
 
-let firebaseReady = false;
+const serviceAccount=JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
-try {
+admin.initializeApp({
+credential:admin.credential.cert(serviceAccount)
+});
 
-  const serviceAccount = JSON.parse(
-    process.env.FIREBASE_SERVICE_ACCOUNT_JSON
-  );
+firebaseReady=true;
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+console.log("🔥 Firebase inicializado correctamente");
 
-  firebaseReady = true;
+}catch(error){
 
-  console.log("🔥 Firebase inicializado correctamente");
-
-} catch (error) {
-
-  console.error("❌ Error inicializando Firebase:", error.message);
+console.error("❌ Error inicializando Firebase:",error);
 
 }
 
-/* --------------------------------
-   ALMACENAR TOKENS
--------------------------------- */
+const tokens=new Set();
 
-const tokens = new Set();
+/* registrar dispositivos */
 
-app.post("/registrar-token", (req, res) => {
+app.post("/registrar-token",(req,res)=>{
 
-  const { token } = req.body;
+const {token}=req.body;
 
-  if (!token) {
-    return res.json({ success: false, error: "Token vacío" });
-  }
+if(!token){
 
-  tokens.add(token);
+return res.json({success:false});
 
-  console.log("📱 Token registrado:", token);
+}
 
-  res.json({
-    success: true,
-    totalTokens: tokens.size
-  });
+tokens.add(token);
+
+console.log("📱 Token registrado:",token);
+
+res.json({
+success:true,
+total:tokens.size
+});
 
 });
 
-/* --------------------------------
-   ALERTA DE EMERGENCIA
--------------------------------- */
+/* alerta */
 
-app.post("/emergency", async (req, res) => {
+app.post("/emergency",async(req,res)=>{
 
-  if (!firebaseReady) {
-    return res.json({
-      success: false,
-      error: "Firebase no inicializado"
-    });
-  }
+if(!firebaseReady){
 
-  try {
+return res.json({
+success:false,
+error:"Firebase no listo"
+});
 
-    const message = {
-      notification: {
-        title: "🚨 ALERTA VECINAL",
-        body: "Un vecino activó la alarma"
-      },
-      tokens: Array.from(tokens)
-    };
+}
 
-    const response =
-      await admin.messaging().sendEachForMulticast(message);
+if(tokens.size===0){
 
-    console.log("📢 Notificaciones enviadas:", response.successCount);
+return res.json({
+success:false,
+error:"No hay dispositivos registrados"
+});
 
-    res.json({
-      success: true,
-      enviados: response.successCount
-    });
+}
 
-  } catch (error) {
+try{
 
-    console.error("❌ Error enviando alerta:", error);
+const {tipo,lat,lng}=req.body;
 
-    res.json({
-      success: false,
-      error: error.message
-    });
+const mapa=lat&&lng
+?`https://www.google.com/maps?q=${lat},${lng}`
+:"";
 
-  }
+const message={
+notification:{
+title:"🚨 ALERTA VECINAL",
+body:`Un vecino activó ${tipo}`
+},
+data:{
+mapa
+},
+tokens:Array.from(tokens)
+};
+
+const response=await admin.messaging().sendEachForMulticast(message);
+
+console.log("📢 Notificaciones enviadas:",response.successCount);
+
+res.json({
+success:true,
+enviados:response.successCount
+});
+
+}catch(error){
+
+console.error("❌ Error enviando alerta:",error);
+
+res.json({
+success:false,
+error:error.message
+});
+
+}
 
 });
 
-/* --------------------------------
-   RUTA PRINCIPAL
--------------------------------- */
+/* pagina principal */
 
-app.get("/", (req, res) => {
+app.get("/",(req,res)=>{
 
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+res.sendFile(path.join(__dirname,"public","index.html"));
 
 });
 
-/* --------------------------------
-   SERVIDOR
--------------------------------- */
+const PORT=process.env.PORT||10000;
 
-const PORT = process.env.PORT || 10000;
+app.listen(PORT,()=>{
 
-app.listen(PORT, () => {
-
-  console.log("🚀 Servidor corriendo en puerto", PORT);
+console.log("🚀 Servidor corriendo en puerto",PORT);
 
 });
