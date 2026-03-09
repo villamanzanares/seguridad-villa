@@ -1,148 +1,89 @@
-import express from "express";
-import admin from "firebase-admin";
-import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
+const express = require("express");
+const admin = require("firebase-admin");
+const bodyParser = require("body-parser");
+const path = require("path");
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(cors());
+app.use(bodyParser.json());
+app.use(express.static("public"));
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+/* FIREBASE ADMIN */
 
-app.use(express.static(path.join(__dirname,"public")));
-
-let firebaseReady=false;
-
-try{
-
-const serviceAccount=JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+const serviceAccount = require("./serviceAccountKey.json");
 
 admin.initializeApp({
-credential:admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(serviceAccount)
 });
 
-firebaseReady=true;
+const tokens = new Set();
 
-console.log("🔥 Firebase inicializado correctamente");
+/* GUARDAR TOKEN */
 
-}catch(error){
+app.post("/guardar-token", (req, res) => {
 
-console.error("❌ Error inicializando Firebase:",error);
+  const { token } = req.body;
 
-}
+  if (!token) {
+    return res.status(400).send("Token inválido");
+  }
 
-/* almacenamiento simple de tokens */
+  tokens.add(token);
 
-const tokens=new Set();
+  console.log("📱 Token registrado:", token);
 
-/* registrar dispositivos */
-
-app.post("/registrar-token",(req,res)=>{
-
-const {token}=req.body;
-
-if(!token){
-
-return res.json({success:false});
-
-}
-
-tokens.add(token);
-
-console.log("📱 Token registrado:",token);
-console.log("📊 Total dispositivos:",tokens.size);
-
-res.json({
-success:true,
-total:tokens.size
+  res.send("Token guardado");
 });
 
-});
+/* ENVIAR ALERTA */
 
-/* alerta */
+app.post("/alerta", async (req, res) => {
 
-app.post("/emergency",async(req,res)=>{
+  const { tipo, lat, lng } = req.body;
 
-if(!firebaseReady){
+  console.log("🚨 Alerta recibida:", tipo);
+  console.log("📍 GPS:", lat, lng);
 
-return res.json({
-success:false,
-error:"Firebase no listo"
-});
+  const mapa = `https://www.google.com/maps?q=${lat},${lng}`;
 
-}
+  const message = {
+    notification: {
+      title: "🚨 ALERTA VECINAL",
+      body: `${tipo} cerca de tu ubicación`
+    },
 
-if(tokens.size===0){
+    data: {
+      mapa: mapa
+    },
 
-return res.json({
-success:false,
-error:"No hay dispositivos registrados"
-});
+    tokens: Array.from(tokens)
+  };
 
-}
+  try {
 
-try{
+    const response = await admin.messaging().sendEachForMulticast(message);
 
-const {tipo,lat,lng}=req.body;
+    console.log("📢 Notificaciones enviadas:", response.successCount);
 
-const mapa=lat&&lng
-?`https://www.google.com/maps?q=${lat},${lng}`
-:"";
+    res.send("Alerta enviada");
 
-const message={
-data:{
-title:"🚨 ALERTA VECINAL",
-body:`Un vecino activó ${tipo}`,
-mapa
-},
-tokens:Array.from(tokens)
-};
+  } catch (error) {
 
-console.log("🚨 Enviando alerta a",tokens.size,"dispositivos");
+    console.error("❌ Error enviando alerta:", error);
 
-const response=await admin.messaging().sendEachForMulticast(message);
+    res.status(500).send("Error enviando alerta");
 
-console.log("📢 Notificaciones enviadas:",response.successCount);
-
-if(response.failureCount>0){
-
-console.log("⚠️ Fallos:",response.failureCount);
-
-}
-
-res.json({
-success:true,
-enviados:response.successCount
-});
-
-}catch(error){
-
-console.error("❌ Error enviando alerta:",error);
-
-res.json({
-success:false,
-error:error.message
-});
-
-}
+  }
 
 });
 
-/* pagina principal */
+/* CARGAR APP */
 
-app.get("/",(req,res)=>{
-
-res.sendFile(path.join(__dirname,"public","index.html"));
-
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-const PORT=process.env.PORT||10000;
-
-app.listen(PORT,()=>{
-
-console.log("🚀 Servidor corriendo en puerto",PORT);
-
+app.listen(PORT, () => {
+  console.log("🚀 Servidor iniciado en puerto", PORT);
 });
