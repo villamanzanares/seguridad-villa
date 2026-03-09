@@ -1,8 +1,7 @@
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js?v=2');
-importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js?v=2');
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js?v=3');
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js?v=3');
 
-// Versión del SW
-const SW_VERSION = 'v2';
+const SW_VERSION = 'v3';
 console.log('[SW] Versión:', SW_VERSION);
 
 // Inicializa Firebase
@@ -27,7 +26,6 @@ const sonidos = [
 
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Notificación recibida:', payload);
-
   const sonidoElegido = sonidos[Math.floor(Math.random() * sonidos.length)];
 
   const notificationTitle = payload.notification?.title || 'Alerta Villa Segura';
@@ -35,7 +33,7 @@ messaging.onBackgroundMessage((payload) => {
     body: payload.notification?.body || 'Revisa la aplicación',
     icon: '/icon.png',
     badge: '/icon.png',
-    vibrate: [200, 100, 200],
+    vibrate: [200,100,200],
     sound: sonidoElegido,
     data: payload.data || {}
   };
@@ -47,7 +45,7 @@ self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notificación clickeada', event.notification.data);
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
       if (clientList.length > 0) clientList[0].focus();
       else clients.openWindow('/');
     })
