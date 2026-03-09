@@ -1,228 +1,117 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-
-<title>Villa Segura</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Villa Segura - Alertas Vecinales</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 <style>
-
-body{
-font-family:Arial;
-text-align:center;
-background:#111;
-color:white;
-margin:0;
-padding:20px;
-}
-
-h1{
-margin-bottom:30px;
-}
-
-button{
-
-width:90%;
-max-width:400px;
-
-padding:20px;
-
-margin:10px;
-
-font-size:20px;
-
-border:none;
-
-border-radius:10px;
-
-cursor:pointer;
-
-}
-
-.emergencia{background:#ff0033;}
-.robo{background:#ff7a00;}
-.incendio{background:#ff0000;}
-.asistencia{background:#0066ff;}
-
-#debug{
-margin-top:30px;
-font-size:12px;
-background:#000;
-padding:10px;
-text-align:left;
-}
-
+  body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0; padding: 0;
+    background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    color: #1f2937;
+  }
+  header {
+    width: 100%;
+    padding: 1rem 0;
+    background-color: #0f172a;
+    color: #fff;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  main {
+    margin-top: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1.2rem;
+    width: 90%;
+    max-width: 500px;
+  }
+  button {
+    padding: 1.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  }
+  button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+  }
+  #btnEmergencia { background-color: #dc2626; } /* rojo */
+  #btnRobo { background-color: #f59e0b; }       /* naranja */
+  #btnIncendio { background-color: #ef4444; }   /* rojo fuego */
+  #btnAsistencia { background-color: #2563eb; } /* azul */
+  footer {
+    margin-top: auto;
+    padding: 1rem 0;
+    font-size: 0.85rem;
+    color: #64748b;
+  }
 </style>
-
 </head>
-
 <body>
-
-<h1>🚨 Villa Segura</h1>
-
-<button class="emergencia" onclick="botonEmergencia()">
-🚨 EMERGENCIA
-</button>
-
-<button class="robo" onclick="botonRobo()">
-🚔 ROBO
-</button>
-
-<button class="incendio" onclick="botonIncendio()">
-🔥 INCENDIO
-</button>
-
-<button class="asistencia" onclick="botonAsistencia()">
-🆘 ASISTENCIA
-</button>
-
-<div id="debug"></div>
-
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"></script>
+  <header>Villa Segura 🚨</header>
+  <main>
+    <button id="btnEmergencia">EMERGENCIA</button>
+    <button id="btnRobo">ROBO</button>
+    <button id="btnIncendio">INCENDIO</button>
+    <button id="btnAsistencia">ASISTENCIA</button>
+  </main>
+  <footer id="debug">Estado: listo</footer>
 
 <script>
+const debug = document.getElementById('debug');
 
-function log(txt){
-document.getElementById("debug").innerHTML += txt + "<br>";
-console.log(txt);
-}
+const sendAlert = async (type) => {
+  debug.textContent = `Estado: obteniendo ubicación para ${type}...`;
+  if (!navigator.geolocation) {
+    alert('Geolocalización no soportada');
+    debug.textContent = 'Estado: error, geolocalización no soportada';
+    return;
+  }
 
-log("Iniciando app...");
-
-const firebaseConfig = {
-
-apiKey:"AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-
-authDomain:"alerta-rosko.firebaseapp.com",
-
-projectId:"alerta-rosko",
-
-messagingSenderId:"1022811358317",
-
-appId:"1:1022811358317:web:ce210848e7ed63d1412b64"
-
+  navigator.geolocation.getCurrentPosition(async (position) => {
+    const { latitude, longitude } = position.coords;
+    debug.textContent = `Estado: enviando alerta ${type}...`;
+    try {
+      const res = await fetch('/send-alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, latitude, longitude })
+      });
+      const data = await res.json();
+      if (data.success) {
+        debug.textContent = `✅ Alerta ${type} enviada correctamente (ID: ${data.messageId})`;
+      } else {
+        debug.textContent = `❌ Error al enviar alerta: ${data.error || data.message}`;
+      }
+    } catch (err) {
+      console.error(err);
+      debug.textContent = `❌ Error al enviar alerta: ${err.message}`;
+    }
+  }, (err) => {
+    alert('Error obteniendo ubicación: ' + err.message);
+    debug.textContent = '❌ Error obteniendo ubicación';
+  });
 };
 
-firebase.initializeApp(firebaseConfig);
-
-const messaging = firebase.messaging();
-
-async function iniciar(){
-
-const permiso = await Notification.requestPermission();
-
-log("Permiso notificaciones: "+permiso);
-
-if(permiso!=="granted") return;
-
-const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-
-log("Service Worker registrado");
-
-const token = await messaging.getToken({
-serviceWorkerRegistration:registration
-});
-
-log("TOKEN: "+token);
-
-await fetch("/guardar-token",{
-
-method:"POST",
-
-headers:{"Content-Type":"application/json"},
-
-body:JSON.stringify({token})
-
-});
-
-log("Token enviado al servidor");
-
-}
-
-iniciar();
-
-async function enviarAlerta(tipo){
-
-if(!navigator.geolocation){
-
-alert("GPS no disponible");
-
-return;
-
-}
-
-navigator.geolocation.getCurrentPosition(async pos=>{
-
-const lat=pos.coords.latitude;
-
-const lng=pos.coords.longitude;
-
-log("Enviando alerta: "+tipo);
-
-log("GPS: "+lat+","+lng);
-
-await fetch("/alerta",{
-
-method:"POST",
-
-headers:{"Content-Type":"application/json"},
-
-body:JSON.stringify({
-
-tipo,
-
-lat,
-
-lng
-
-})
-
-});
-
-log("Alerta enviada");
-
-});
-
-}
-
-/* BOTONES */
-
-function botonEmergencia(){
-
-enviarAlerta("EMERGENCIA");
-
-}
-
-function botonRobo(){
-
-enviarAlerta("ROBO");
-
-window.location.href="tel:133";
-
-}
-
-function botonIncendio(){
-
-enviarAlerta("INCENDIO");
-
-window.location.href="tel:132";
-
-}
-
-function botonAsistencia(){
-
-enviarAlerta("ASISTENCIA");
-
-window.location.href="tel:131";
-
-}
-
+document.getElementById('btnEmergencia').onclick = () => sendAlert('EMERGENCIA');
+document.getElementById('btnRobo').onclick = () => sendAlert('ROBO');
+document.getElementById('btnIncendio').onclick = () => sendAlert('INCENDIO');
+document.getElementById('btnAsistencia').onclick = () => sendAlert('ASISTENCIA');
 </script>
-
 </body>
-
 </html>
