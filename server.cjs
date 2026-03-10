@@ -1,10 +1,10 @@
 const express = require("express");
 const admin = require("firebase-admin");
-const bodyParser = require("body-parser");
 
 const app = express();
 
-app.use(bodyParser.json());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
@@ -15,26 +15,36 @@ admin.initializeApp({
 
 let tokens = [];
 
+
+/* REGISTRO DE DISPOSITIVO */
+
 app.post("/guardar-token", (req, res) => {
+
+  console.log("BODY RECIBIDO:", req.body);
 
   const token = req.body.token;
 
   if (!token) {
-    console.log("Token vacío recibido");
-    return res.json({ ok: false });
+    console.log("Token vacío");
+    return res.json({ ok:false });
   }
 
   if (!tokens.includes(token)) {
+
     tokens.push(token);
+
     console.log("Nuevo dispositivo:", token);
+
   }
 
   console.log("Tokens registrados:", tokens.length);
 
-  res.json({ ok: true });
+  res.json({ ok:true });
 
 });
 
+
+/* ENVÍO DE ALERTA */
 
 app.post("/alerta", async (req, res) => {
 
@@ -43,8 +53,13 @@ app.post("/alerta", async (req, res) => {
   console.log("ALERTA:", tipo, lat, lng);
 
   if (tokens.length === 0) {
+
     console.log("No hay dispositivos registrados");
-    return res.json({ success: false, motivo: "sin tokens" });
+
+    return res.json({
+      success:false
+    });
+
   }
 
   try {
@@ -53,9 +68,12 @@ app.post("/alerta", async (req, res) => {
 
       tokens: tokens,
 
-      notification: {
-        title: "🚨 Villa Segura",
-        body: "Alerta de " + tipo
+      webpush: {
+        notification: {
+          title: "🚨 Villa Segura",
+          body: "Alerta de " + tipo,
+          icon: "/icon.png"
+        }
       },
 
       data: {
@@ -69,16 +87,16 @@ app.post("/alerta", async (req, res) => {
     console.log("Enviados:", response.successCount);
 
     res.json({
-      success: true,
-      enviados: response.successCount
+      success:true,
+      enviados:response.successCount
     });
 
-  } catch (error) {
+  } catch(error) {
 
     console.log("Error FCM:", error);
 
     res.json({
-      success: false
+      success:false
     });
 
   }
@@ -89,5 +107,7 @@ app.post("/alerta", async (req, res) => {
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
+
   console.log("Servidor corriendo en puerto", PORT);
+
 });
