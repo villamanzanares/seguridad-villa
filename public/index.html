@@ -29,31 +29,21 @@ margin-top:10px;
 }
 
 button{
-
 width:90%;
 padding:18px;
 margin:8px;
-
 font-size:18px;
-
 border:none;
 border-radius:12px;
-
 color:white;
-
 cursor:pointer;
-
 transition: transform 0.1s, box-shadow 0.1s;
-
 box-shadow:0 4px 8px rgba(0,0,0,0.5);
-
 }
 
 button:active{
-
 transform:scale(0.95);
 box-shadow:0 2px 4px rgba(0,0,0,0.5);
-
 }
 
 .emergencia{ background:red; }
@@ -66,12 +56,6 @@ height:320px;
 margin-top:10px;
 }
 
-.footer{
-margin-top:10px;
-font-size:14px;
-color:#aaa;
-}
-
 </style>
 
 </head>
@@ -82,31 +66,17 @@ color:#aaa;
 
 <audio id="sirena" src="/sirena.mp3" preload="auto"></audio>
 
-<button class="emergencia" onclick="enviarAlerta('EMERGENCIA')">
-🚨 EMERGENCIA
-</button>
-
-<button class="robo" onclick="enviarAlerta('ROBO')">
-🚔 ROBO
-</button>
-
-<button class="incendio" onclick="enviarAlerta('INCENDIO')">
-🔥 INCENDIO
-</button>
-
-<button class="asistencia" onclick="enviarAlerta('ASISTENCIA')">
-🩺 ASISTENCIA
-</button>
+<button class="emergencia" onclick="enviarAlerta('EMERGENCIA')">🚨 EMERGENCIA</button>
+<button class="robo" onclick="enviarAlerta('ROBO')">🚔 ROBO</button>
+<button class="incendio" onclick="enviarAlerta('INCENDIO')">🔥 INCENDIO</button>
+<button class="asistencia" onclick="enviarAlerta('ASISTENCIA')">🩺 ASISTENCIA</button>
 
 <div id="mapa"></div>
 
-<div class="footer">
-Sistema de alerta vecinal
-</div>
-
 <script>
 
-/* FIREBASE CONFIG */
+
+/* FIREBASE */
 
 const firebaseConfig = {
 
@@ -167,13 +137,12 @@ const lat = pos.coords.latitude;
 const lng = pos.coords.longitude;
 
 L.marker([lat,lng]).addTo(mapa)
-.bindPopup("📍 Tu ubicación")
-.openPopup();
+.bindPopup("📍 Tu ubicación");
 
 });
 
 
-/* MARCADOR ALERTA */
+/* MOSTRAR ALERTA */
 
 function mostrarAlerta(lat,lng,tipo){
 
@@ -213,26 +182,23 @@ lng
 }
 
 
-/* MENSAJE SERVICE WORKER */
+/* SI SE ABRE DESDE NOTIFICACION */
 
-navigator.serviceWorker.addEventListener("message",(event)=>{
+const params = new URLSearchParams(window.location.search);
 
-if(event.data.tipo==="alerta"){
+const lat = params.get("lat");
+const lng = params.get("lng");
+const tipo = params.get("tipo");
+
+if(lat && lng){
+
+mostrarAlerta(lat,lng,tipo);
 
 const audio=document.getElementById("sirena");
-
 audio.volume=1;
 audio.play().catch(()=>{});
 
-mostrarAlerta(
-event.data.lat,
-event.data.lng,
-event.data.tipo
-);
-
 }
-
-});
 
 </script>
 
