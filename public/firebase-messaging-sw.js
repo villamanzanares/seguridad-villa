@@ -22,18 +22,22 @@ messaging.onBackgroundMessage(payload => {
   });
 });
 
-// Click en notificación
+// Al tocar la notificación
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  event.waitUntil(clients.matchAll({ type: "window" }).then(windowClients => {
-    for (let client of windowClients) {
-      if (client.url === '/' && 'focus' in client) {
-        client.postMessage({ accion: 'sonarSirena' });
-        return client.focus();
+  event.waitUntil(
+    clients.matchAll({ type: "window" }).then(windowClients => {
+      for (let client of windowClients) {
+        // Si ya hay ventana abierta
+        if (client.url === '/' && 'focus' in client) {
+          client.postMessage({ accion: 'sonarSirena' });
+          return client.focus();
+        }
       }
-    }
-    return clients.openWindow('/').then(newClient => {
-      newClient.postMessage({ accion: 'sonarSirena' });
-    });
-  }));
+      // Si no hay ventana abierta, abrir una nueva
+      return clients.openWindow('/').then(newClient => {
+        newClient.postMessage({ accion: 'sonarSirena' });
+      });
+    })
+  );
 });
