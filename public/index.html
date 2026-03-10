@@ -57,7 +57,15 @@ messaging.requestPermission()
 
 // Sirena
 const sirena = new Audio('sirena.mp3');
+let listoParaSonar = false;
+
+// Activar permiso de usuario para reproducir audio futuro
+document.addEventListener('click', () => {
+  listoParaSonar = true;
+}, { once: true });
+
 function reproducirAlerta() {
+  if (!listoParaSonar) return;
   sirena.currentTime = 0;
   sirena.play().catch(err => console.log("Error reproduciendo sonido:", err));
 }
@@ -81,11 +89,18 @@ db.collection("alerts").orderBy("createdAt").onSnapshot(snapshot => {
 
 // FCM primer plano
 messaging.onMessage(payload => {
-  console.log("Notificación recibida:", payload);
-  reproducirAlerta();
   const { tipo, lat, lng } = payload.data;
   const marker = L.marker([lat, lng]).addTo(map).bindPopup(tipo);
   markers.push(marker);
+  reproducirAlerta();
+});
+
+// Escuchar mensajes del Service Worker para sonar sirena al abrir notificación
+navigator.serviceWorker.addEventListener('message', event => {
+  if (event.data?.accion === 'sonarSirena') {
+    listoParaSonar = true;
+    reproducirAlerta();
+  }
 });
 
 // Enviar alerta
