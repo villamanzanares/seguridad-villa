@@ -11,17 +11,29 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Notificaciones en background
+// Notificación en background
 messaging.onBackgroundMessage(payload => {
   const { tipo } = payload.data;
   self.registration.showNotification(`Alerta: ${tipo}`, {
-    body: `Toca para abrir la app`,
-    icon: '/icon.png'
+    body: "Toca para abrir la app y escuchar la sirena",
+    icon: '/icon.png',
+    vibrate: [200, 100, 200],
+    tag: 'alerta-rosko'
   });
 });
 
-// Al tocar notificación
+// Click en notificación
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  event.waitUntil(clients.openWindow('/'));
+  event.waitUntil(clients.matchAll({ type: "window" }).then(windowClients => {
+    for (let client of windowClients) {
+      if (client.url === '/' && 'focus' in client) {
+        client.postMessage({ accion: 'sonarSirena' });
+        return client.focus();
+      }
+    }
+    return clients.openWindow('/').then(newClient => {
+      newClient.postMessage({ accion: 'sonarSirena' });
+    });
+  }));
 });
