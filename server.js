@@ -1,58 +1,83 @@
-import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
+const express = require("express");
+const admin = require("firebase-admin");
+const bodyParser = require("body-parser");
+const path = require("path");
 
 const app = express();
-app.use(express.json());
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+app.use(bodyParser.json());
+app.use(express.static("public"));
 
-// servir archivos public
-app.use(express.static(path.join(__dirname, "public")));
+const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 
-// servir sonidos
-app.use("/sounds", express.static(path.join(__dirname, "public/sounds")));
+admin.initializeApp({
+credential: admin.credential.cert(serviceAccount)
+});
 
-console.log("Servidor iniciado correctamente");
+let tokens = [];
 
-// guardar tokens
-const tokens = [];
+app.post("/guardar-token",(req,res)=>{
 
-// registrar token
-app.post("/register-token", (req, res) => {
+const token = req.body.token;
 
-  const { token } = req.body;
+if(!tokens.includes(token)){
+tokens.push(token);
+console.log("Nuevo dispositivo:",token);
+}
 
-  if (token && !tokens.includes(token)) {
-    tokens.push(token);
-  }
-
-  console.log("Tokens registrados:", tokens.length);
-
-  res.json({
-    success: true
-  });
+res.json({ok:true});
 
 });
 
-// recibir alerta
-app.post("/send-alert", (req, res) => {
+app.post("/alerta",async(req,res)=>{
 
-  const { type } = req.body;
+const {tipo,lat,lng} = req.body;
 
-  console.log("ALERTA RECIBIDA:", type);
+console.log("ALERTA:",tipo,lat,lng);
 
-  res.json({
-    success: true,
-    messageId: "SIMULADO"
-  });
+const mensaje = {
+
+notification:{
+title:"🚨 Villa Segura",
+body:"Alerta de "+tipo
+},
+
+data:{
+lat:String(lat),
+lng:String(lng),
+tipo:tipo
+}
+
+};
+
+try{
+
+const response = await admin.messaging().sendEachForMulticast({
+tokens:tokens,
+...mensaje
+});
+
+console.log("Enviados:",response.successCount);
+
+res.json({
+success:true,
+enviados:response.successCount
+});
+
+}catch(error){
+
+console.log(error);
+
+res.json({
+success:false
+});
+
+}
 
 });
 
-// puerto
 const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
-  console.log("Servidor escuchando en puerto", PORT);
+app.listen(PORT,()=>{
+console.log("Servidor corriendo en puerto",PORT);
 });
