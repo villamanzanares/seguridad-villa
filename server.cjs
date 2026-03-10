@@ -53,8 +53,20 @@ tipo:tipo
 try{
 
 const response = await admin.messaging().sendEachForMulticast({
-tokens:tokens,
-...mensaje
+
+tokens: tokens,
+
+notification: {
+title: "🚨 Villa Segura",
+body: "Alerta de " + tipo
+},
+
+data: {
+tipo: tipo,
+lat: String(lat),
+lng: String(lng)
+}
+
 });
 
 console.log("Enviados:",response.successCount);
@@ -81,4 +93,5 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT,()=>{
 console.log("Servidor corriendo en puerto",PORT);
 });
+
 
