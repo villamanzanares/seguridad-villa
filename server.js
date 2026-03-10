@@ -1,44 +1,57 @@
 import express from 'express';
-import bodyParser from 'body-parser';
 import admin from 'firebase-admin';
 import fs from 'fs';
 import path from 'path';
 
-const __dirname = path.resolve();
-const serviceAccount = JSON.parse(fs.readFileSync(path.join(__dirname, 'serviceAccountKey.json'), 'utf8'));
-
 const app = express();
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(express.static('public'));
+
+// Inicializar Firebase Admin
+const __dirname = path.resolve();
+const serviceAccount = JSON.parse(
+  fs.readFileSync(path.join(__dirname, 'serviceAccountKey.json'), 'utf8')
+);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
+console.log("Firebase Admin inicializado ✅");
 
+// Guardar tokens registrados en memoria
+const tokens = new Set();
+
+// Endpoint para registrar tokens FCM
+app.post('/register-token', (req, res) => {
+  const { token } = req.body;
+  if (token) tokens.add(token);
+  console.log('Tokens registrados:', Array.from(tokens));
+  res.json({ success: true });
+});
+
+// Endpoint para enviar alertas
 app.post('/send-alert', async (req, res) => {
   const { type, latitude, longitude } = req.body;
-  if (!type || !latitude || !longitude) {
-    return res.status(400).json({ success: false, message: 'Datos incompletos' });
-  }
+  if (!type) return res.status(400).json({ error: "Tipo de alerta requerido" });
 
-  const message = {
+  const payload = {
     notification: {
-      title: `Alerta: ${type}`,
-      body: `Ubicación: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+      title: `Alerta: ${type.toUpperCase()}`,
+      body: `Ubicación: ${latitude}, ${longitude}`
     },
-    topic: 'vecinos',
-    data: { type, latitude: latitude.toString(), longitude: longitude.toString() }
+    data: { type }
   };
 
   try {
-    const response = await admin.messaging().send(message);
-    console.log(`Alerta ${type} enviada:`, response);
-    res.json({ success: true, messageId: response });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, error: error.message });
+    const response = await admin.messaging().sendToDevice(Array.from(tokens), payload);
+    console.log('Notificación enviada:', response);
+    res.json({ success: true, messageId: response?.results?.[0]?.messageId || 'SIMULADO' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
+// Iniciar servidor
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
