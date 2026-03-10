@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 
 <head>
 
@@ -8,106 +8,77 @@
 
 <title>Villa Segura</title>
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+
 <style>
 
 body{
 font-family:Arial;
+text-align:center;
 background:#111;
 color:white;
-text-align:center;
 margin:0;
-padding:0;
 }
 
 h1{
-margin-top:20px;
-}
-
-.contenedor{
-margin-top:40px;
+margin-top:10px;
 }
 
 button{
-width:80%;
-max-width:300px;
-padding:20px;
-margin:10px;
-font-size:20px;
+width:90%;
+padding:18px;
+margin:8px;
+font-size:18px;
 border:none;
 border-radius:10px;
-color:white;
-cursor:pointer;
-transition:transform 0.1s;
 }
 
-button:active{
-transform:scale(0.95);
-}
-
-.emergencia{background:#d32f2f;}
-.robo{background:#ff9800;}
-.incendio{background:#e53935;}
-.asistencia{background:#1976d2;}
-
-footer{
-position:fixed;
-bottom:0;
-left:0;
-width:100%;
-background:#222;
-padding:15px;
-font-size:14px;
+#mapa{
+height:300px;
+margin-top:10px;
 }
 
 </style>
 
 </head>
 
-
 <body>
 
 <h1>🚨 Villa Segura</h1>
 
-<div class="contenedor">
+<audio id="sirena" src="/sirena.mp3" preload="auto"></audio>
 
-<button class="emergencia" onclick="enviarAlerta('EMERGENCIA')">
+<button onclick="enviarAlerta('EMERGENCIA')" style="background:red;color:white;">
 🚨 EMERGENCIA
 </button>
 
-<button class="robo" onclick="enviarAlerta('ROBO')">
-🕵️ ROBO
+<button onclick="enviarAlerta('ROBO')" style="background:orange;">
+🚔 ROBO
 </button>
 
-<button class="incendio" onclick="enviarAlerta('INCENDIO')">
+<button onclick="enviarAlerta('INCENDIO')" style="background:#ff4500;color:white;">
 🔥 INCENDIO
 </button>
 
-<button class="asistencia" onclick="enviarAlerta('ASISTENCIA')">
-🆘 ASISTENCIA
+<button onclick="enviarAlerta('ASISTENCIA')" style="background:blue;color:white;">
+🩺 ASISTENCIA
 </button>
 
-</div>
-
-
-<footer id="estado">
-INICIANDO...
-</footer>
-
-
-
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+<div id="mapa"></div>
 
 <script>
 
 const firebaseConfig = {
 
-apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-authDomain: "alerta-rosko.firebaseapp.com",
-projectId: "alerta-rosko",
-storageBucket: "alerta-rosko.appspot.com",
-messagingSenderId: "1022811358317",
-appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+apiKey:"AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+authDomain:"alerta-rosko.firebaseapp.com",
+projectId:"alerta-rosko",
+messagingSenderId:"1022811358317",
+appId:"1:1022811358317:web:ce210848e7ed63d1412b64"
 
 };
 
@@ -116,119 +87,97 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 
-
 /* REGISTRAR SERVICE WORKER */
 
-navigator.serviceWorker.register("firebase-messaging-sw.js")
-.then(async (registration)=>{
+navigator.serviceWorker.register("/firebase-messaging-sw.js")
+.then((registration)=>{
 
-console.log("SW registrado");
-
-const permiso = await Notification.requestPermission();
-
-if(permiso !== "granted"){
-
-document.getElementById("estado").innerText="Notificaciones bloqueadas";
-
-return;
-
-}
-
-const token = await messaging.getToken({
-
-serviceWorkerRegistration:registration,
-vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
+messaging.useServiceWorker(registration);
 
 });
 
-console.log("TOKEN:",token);
 
-await fetch("/guardar-token",{
+/* OBTENER TOKEN */
+
+messaging.getToken({ vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw" })
+.then((token)=>{
+
+fetch("/guardar-token",{
 
 method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-token:token
-})
+headers:{ "Content-Type":"application/json" },
+body:JSON.stringify({ token })
 
 });
-
-document.getElementById("estado").innerText="Conectado";
 
 });
 
 
+/* MAPA */
 
-/* RECIBIR MENSAJE CON APP ABIERTA */
+const mapa = L.map('mapa').setView([-33.503,-70.601],16);
 
-messaging.onMessage((payload)=>{
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+attribution:"OSM"
+}).addTo(mapa);
 
-console.log("Mensaje recibido:",payload);
 
-const audio = new Audio(
-"https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
-);
+/* MOSTRAR ALERTA */
 
-audio.play();
+function mostrarAlerta(lat,lng,tipo){
 
-alert(
-payload.notification.title +
-"\n" +
-payload.notification.body
-);
+const marker = L.marker([lat,lng]).addTo(mapa);
 
-});
+marker.bindPopup("🚨 "+tipo).openPopup();
 
+mapa.setView([lat,lng],17);
+
+}
 
 
 /* ENVIAR ALERTA */
 
-async function enviarAlerta(tipo){
+function enviarAlerta(tipo){
 
-document.getElementById("estado").innerText="Enviando alerta...";
+navigator.geolocation.getCurrentPosition((pos)=>{
 
-navigator.geolocation.getCurrentPosition(async(pos)=>{
+const lat = pos.coords.latitude;
+const lng = pos.coords.longitude;
 
-const lat=pos.coords.latitude;
-const lng=pos.coords.longitude;
-
-const res=await fetch("/alerta",{
+fetch("/alerta",{
 
 method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
+headers:{ "Content-Type":"application/json" },
 
 body:JSON.stringify({
-
-tipo:tipo,
-lat:lat,
-lng:lng
-
+tipo,
+lat,
+lng
 })
 
 });
 
-const data=await res.json();
+});
 
-if(data.success){
+}
 
-document.getElementById("estado").innerText=
-"Alerta enviada ✅";
 
-}else{
+/* RECIBIR MENSAJE SERVICE WORKER */
 
-document.getElementById("estado").innerText=
-"Error enviando alerta";
+navigator.serviceWorker.addEventListener("message",(event)=>{
+
+if(event.data.tipo==="alerta"){
+
+const audio=document.getElementById("sirena");
+
+audio.volume=1;
+audio.play().catch(()=>{});
+
+mostrarAlerta(event.data.lat,event.data.lng,event.data.tipo);
 
 }
 
 });
-
-}
 
 </script>
 
