@@ -5,10 +5,14 @@ import path from 'path';
 
 const app = express();
 app.use(express.json());
+
+// Servir archivos estáticos
 app.use(express.static('public'));
 
-// Inicializar Firebase Admin
-const __dirname = path.resolve();
+// Servir correctamente los sonidos
+app.use('/sounds', express.static(path.join(__dirname, 'public/sounds')));
+
+// 🔹 Inicializar Firebase Admin
 const serviceAccount = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'serviceAccountKey.json'), 'utf8')
 );
@@ -18,10 +22,10 @@ admin.initializeApp({
 });
 console.log("Firebase Admin inicializado ✅");
 
-// Guardar tokens registrados en memoria
+// 🔹 Guardar tokens en memoria
 const tokens = new Set();
 
-// Endpoint para registrar tokens FCM
+// 🔹 Endpoint para registrar tokens FCM
 app.post('/register-token', (req, res) => {
   const { token } = req.body;
   if (token) tokens.add(token);
@@ -29,7 +33,7 @@ app.post('/register-token', (req, res) => {
   res.json({ success: true });
 });
 
-// Endpoint para enviar alertas
+// 🔹 Endpoint para enviar alertas
 app.post('/send-alert', async (req, res) => {
   const { type, latitude, longitude } = req.body;
   if (!type) return res.status(400).json({ error: "Tipo de alerta requerido" });
@@ -52,6 +56,6 @@ app.post('/send-alert', async (req, res) => {
   }
 });
 
-// Iniciar servidor
+// 🔹 Iniciar servidor
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
