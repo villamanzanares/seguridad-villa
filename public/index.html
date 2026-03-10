@@ -55,12 +55,12 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging.js";
 
-    // Config Firebase
+    // 🔹 Configuración Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
       authDomain: "alerta-rosko.firebaseapp.com",
       projectId: "alerta-rosko",
-      storageBucket: "alerta-rosko.firebasestorage.app",
+      storageBucket: "alerta-rosko.appspot.com",
       messagingSenderId: "1022811358317",
       appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
     };
@@ -68,14 +68,21 @@
     const app = initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
 
-    // Inicializar FCM
+    // 🔹 Registrar service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then(reg => console.log('SW registrado ✅', reg))
+        .catch(err => console.error('Error registrando SW ❌', err));
+    }
+
+    // 🔹 Inicializar FCM y obtener token
     async function initFCM() {
       try {
         const token = await getToken(messaging, { vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw" });
         console.log("Token FCM:", token);
         document.getElementById("footer").innerText = "Token FCM registrado ✅";
 
-        // Enviar token al servidor para recibir notificaciones
+        // Enviar token al servidor
         await fetch('/register-token', { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' },
@@ -89,14 +96,14 @@
 
     initFCM();
 
-    // Escuchar mensajes mientras la app está abierta
+    // 🔹 Escuchar mensajes en primer plano
     onMessage(messaging, (payload) => {
       console.log('Notificación recibida:', payload);
       document.getElementById("footer").innerText = `Notificación: ${payload.notification?.title || 'Sin título'}`;
       reproducirSonido(payload.data?.type);
     });
 
-    // Sonidos
+    // 🔹 Sonidos
     const sonidos = {
       emergencia: new Audio("./sounds/emergencia.wav"),
       robo: new Audio("./sounds/policia.wav"),
@@ -111,7 +118,7 @@
       }
     }
 
-    // Botones
+    // 🔹 Botones
     ["emergencia","robo","incendio","asistencia"].forEach(id => {
       document.getElementById(id).addEventListener("click", async () => {
         document.getElementById("footer").innerText = `Enviando alerta ${id}...`;
