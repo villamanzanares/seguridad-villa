@@ -12,7 +12,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 
-/* CUANDO LLEGA LA NOTIFICACIÓN */
+/* NOTIFICACIÓN EN SEGUNDO PLANO */
 
 messaging.onBackgroundMessage(function(payload) {
 
@@ -20,9 +20,7 @@ messaging.onBackgroundMessage(function(payload) {
   const lat = payload.data.lat;
   const lng = payload.data.lng;
 
-  const notificationTitle = "🚨 Villa Segura";
-
-  const notificationOptions = {
+  self.registration.showNotification("🚨 Villa Segura", {
 
     body: "Alerta de " + tipo,
     icon: "/icon.png",
@@ -30,23 +28,14 @@ messaging.onBackgroundMessage(function(payload) {
     data: {
       lat: lat,
       lng: lng
-    },
+    }
 
-    actions: [
-      {
-        action: "ver",
-        title: "📍 Ver ubicación"
-      }
-    ]
-
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  });
 
 });
 
 
-/* CUANDO EL USUARIO TOCA LA NOTIFICACIÓN */
+/* CUANDO TOCAN LA NOTIFICACIÓN */
 
 self.addEventListener("notificationclick", function(event){
 
