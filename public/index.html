@@ -96,6 +96,8 @@ const registroSW = await navigator.serviceWorker.register(
 );
 
 const token = await messaging.getToken({
+  vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
+});
 
 vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
 serviceWorkerRegistration:registroSW
