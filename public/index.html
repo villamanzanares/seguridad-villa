@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
 
 <meta charset="UTF-8">
@@ -14,70 +13,36 @@
 <style>
 
 body{
-font-family:Arial, Helvetica, sans-serif;
+font-family:Arial;
 background:#111;
 color:white;
 text-align:center;
-margin:0;
-padding:0;
-}
-
-h1{
-margin-top:20px;
-}
-
-.container{
-padding:20px;
 }
 
 button{
-
 width:90%;
 max-width:400px;
 padding:25px;
 margin:12px;
-
 font-size:22px;
-font-weight:bold;
-
 border:none;
-border-radius:12px;
-
+border-radius:10px;
 color:white;
-
 transition:0.1s;
-
 }
 
 button:active{
 transform:scale(0.95);
-box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
 }
 
-.emergencia{
-background:#ff0000;
-}
-
-.robo{
-background:#ff8800;
-}
-
-.incendio{
-background:#ff4444;
-}
-
-.asistencia{
-background:#0066ff;
-}
+.emergencia{background:red}
+.robo{background:orange}
+.incendio{background:#ff4444}
+.asistencia{background:blue}
 
 footer{
-
-margin-top:30px;
-padding:20px;
-
-font-size:14px;
+margin-top:20px;
 color:#ccc;
-
 }
 
 </style>
@@ -88,29 +53,12 @@ color:#ccc;
 
 <h1>🚨 Villa Segura</h1>
 
-<div class="container">
+<button class="emergencia" onclick="enviarAlerta('EMERGENCIA')">🚨 EMERGENCIA</button>
+<button class="robo" onclick="enviarAlerta('ROBO')">🕵️ ROBO</button>
+<button class="incendio" onclick="enviarAlerta('INCENDIO')">🔥 INCENDIO</button>
+<button class="asistencia" onclick="enviarAlerta('ASISTENCIA')">🆘 ASISTENCIA</button>
 
-<button class="emergencia" onclick="enviarAlerta('EMERGENCIA')">
-🚨 EMERGENCIA
-</button>
-
-<button class="robo" onclick="enviarAlerta('ROBO')">
-🕵️ ROBO
-</button>
-
-<button class="incendio" onclick="enviarAlerta('INCENDIO')">
-🔥 INCENDIO
-</button>
-
-<button class="asistencia" onclick="enviarAlerta('ASISTENCIA')">
-🆘 ASISTENCIA
-</button>
-
-</div>
-
-<footer id="footer">
-Iniciando sistema...
-</footer>
+<footer id="estado">Iniciando...</footer>
 
 <script>
 
@@ -128,15 +76,15 @@ firebase.initializeApp(firebaseConfig);
 
 const messaging = firebase.messaging();
 
-let tokenDispositivo = null;
+async function iniciar(){
 
-async function iniciarSistema(){
+try{
 
 const permiso = await Notification.requestPermission();
 
 if(permiso !== "granted"){
 
-document.getElementById("footer").innerText =
+document.getElementById("estado").innerText =
 "Permiso de notificaciones denegado";
 
 return;
@@ -147,17 +95,16 @@ const registroSW = await navigator.serviceWorker.register(
 "/firebase-messaging-sw.js"
 );
 
-messaging.useServiceWorker(registroSW);
+const token = await messaging.getToken({
 
-try{
+vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+serviceWorkerRegistration:registroSW
 
-tokenDispositivo = await messaging.getToken({
-vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
 });
 
-console.log("TOKEN:",tokenDispositivo);
+console.log("TOKEN:",token);
 
-document.getElementById("footer").innerText =
+document.getElementById("estado").innerText =
 "Dispositivo conectado";
 
 await fetch("/guardar-token",{
@@ -168,29 +115,26 @@ headers:{
 "Content-Type":"application/json"
 },
 
-body:JSON.stringify({
-token:tokenDispositivo
-})
+body:JSON.stringify({token})
 
 });
+
+console.log("Token enviado al servidor");
 
 }catch(error){
 
 console.log(error);
 
-document.getElementById("footer").innerText =
-"Error obteniendo token";
+document.getElementById("estado").innerText =
+"Error registrando dispositivo";
 
 }
 
 }
 
-iniciarSistema();
+iniciar();
 
 async function enviarAlerta(tipo){
-
-document.getElementById("footer").innerText =
-"Enviando alerta...";
 
 navigator.geolocation.getCurrentPosition(async(pos)=>{
 
@@ -215,8 +159,8 @@ lng:lng
 
 });
 
-document.getElementById("footer").innerText =
-"Alerta " + tipo + " enviada 🚨";
+document.getElementById("estado").innerText =
+"Alerta "+tipo+" enviada";
 
 });
 
@@ -225,5 +169,4 @@ document.getElementById("footer").innerText =
 </script>
 
 </body>
-
 </html>
