@@ -1,8 +1,6 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import admin from "firebase-admin";
-import fs from "fs";
 
 const app = express();
 app.use(express.json());
@@ -10,95 +8,40 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Servir archivos públicos
+// servir archivos public
 app.use(express.static(path.join(__dirname, "public")));
 
-// Servir sonidos
+// servir sonidos
 app.use("/sounds", express.static(path.join(__dirname, "public/sounds")));
 
-// 🔹 Inicializar Firebase Admin
-let firebaseActivo = false;
+console.log("Servidor iniciado correctamente");
 
-try {
+// guardar tokens
+const tokens = [];
 
-  const serviceAccount = JSON.parse(
-    fs.readFileSync("./serviceAccountKey.json", "utf8")
-  );
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-
-  firebaseActivo = true;
-  console.log("🔥 Firebase inicializado correctamente");
-
-} catch (error) {
-
-  console.log("⚠️ Firebase NO inicializado, funcionando en modo simulación");
-}
-
-// 🔹 Guardar tokens
-const tokens = new Set();
-
+// registrar token
 app.post("/register-token", (req, res) => {
 
   const { token } = req.body;
 
-  if (token) {
-    tokens.add(token);
-    console.log("📱 Token registrado:", token);
+  if (token && !tokens.includes(token)) {
+    tokens.push(token);
   }
 
-  res.json({ success: true });
+  console.log("Tokens registrados:", tokens.length);
+
+  res.json({
+    success: true
+  });
+
 });
 
-// 🔹 Enviar alerta
-app.post("/send-alert", async (req, res) => {
+// recibir alerta
+app.post("/send-alert", (req, res) => {
 
-  const { type, latitude, longitude } = req.body;
+  const { type } = req.body;
 
-  console.log("🚨 Alerta recibida:", type);
-  console.log("📍 Ubicación:", latitude, longitude);
-  console.log("📲 Tokens disponibles:", tokens.size);
-
-  const payload = {
-    notification: {
-      title: `ALERTA ${type.toUpperCase()}`,
-      body: `Ubicación aproximada enviada`
-    },
-    data: {
-      type: type
-    }
-  };
-
-  // 🔹 Si Firebase está activo intenta enviar
-  if (firebaseActivo && tokens.size > 0) {
-
-    try {
-
-      const response = await admin.messaging().sendEachForMulticast({
-        tokens: Array.from(tokens),
-        notification: payload.notification,
-        data: payload.data
-      });
-
-      console.log("📡 Notificaciones enviadas:", response.successCount);
-
-      return res.json({
-        success: true,
-        messageId: "FCM_OK"
-      });
-
-    } catch (error) {
-
-      console.log("❌ Error enviando FCM:", error.message);
-
-    }
-
-  }
-
-  // 🔹 Simulación si falla FCM
-  console.log("🧪 Modo simulación activado");
+  console.log("ALERTA RECIBIDA:", type);
 
   res.json({
     success: true,
@@ -107,9 +50,9 @@ app.post("/send-alert", async (req, res) => {
 
 });
 
-// 🔹 Puerto
+// puerto
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
-  console.log("🚀 Servidor funcionando en puerto", PORT);
+  console.log("Servidor escuchando en puerto", PORT);
 });
