@@ -18,10 +18,10 @@
 
 body{
 font-family:Arial;
-text-align:center;
 background:#111;
 color:white;
 margin:0;
+text-align:center;
 }
 
 h1{
@@ -29,17 +29,47 @@ margin-top:10px;
 }
 
 button{
+
 width:90%;
 padding:18px;
 margin:8px;
+
 font-size:18px;
+
 border:none;
-border-radius:10px;
+border-radius:12px;
+
+color:white;
+
+cursor:pointer;
+
+transition: transform 0.1s, box-shadow 0.1s;
+
+box-shadow:0 4px 8px rgba(0,0,0,0.5);
+
 }
 
+button:active{
+
+transform:scale(0.95);
+box-shadow:0 2px 4px rgba(0,0,0,0.5);
+
+}
+
+.emergencia{ background:red; }
+.robo{ background:orange; }
+.incendio{ background:#ff4500; }
+.asistencia{ background:#0066ff; }
+
 #mapa{
-height:300px;
+height:320px;
 margin-top:10px;
+}
+
+.footer{
+margin-top:10px;
+font-size:14px;
+color:#aaa;
 }
 
 </style>
@@ -52,33 +82,40 @@ margin-top:10px;
 
 <audio id="sirena" src="/sirena.mp3" preload="auto"></audio>
 
-<button onclick="enviarAlerta('EMERGENCIA')" style="background:red;color:white;">
+<button class="emergencia" onclick="enviarAlerta('EMERGENCIA')">
 🚨 EMERGENCIA
 </button>
 
-<button onclick="enviarAlerta('ROBO')" style="background:orange;">
+<button class="robo" onclick="enviarAlerta('ROBO')">
 🚔 ROBO
 </button>
 
-<button onclick="enviarAlerta('INCENDIO')" style="background:#ff4500;color:white;">
+<button class="incendio" onclick="enviarAlerta('INCENDIO')">
 🔥 INCENDIO
 </button>
 
-<button onclick="enviarAlerta('ASISTENCIA')" style="background:blue;color:white;">
+<button class="asistencia" onclick="enviarAlerta('ASISTENCIA')">
 🩺 ASISTENCIA
 </button>
 
 <div id="mapa"></div>
 
+<div class="footer">
+Sistema de alerta vecinal
+</div>
+
 <script>
 
+/* FIREBASE CONFIG */
+
 const firebaseConfig = {
-  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-  authDomain: "alerta-rosko.firebaseapp.com",
-  projectId: "alerta-rosko",
-  storageBucket: "alerta-rosko.firebasestorage.app",
-  messagingSenderId: "1022811358317",
-  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+
+apiKey:"AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+authDomain:"alerta-rosko.firebaseapp.com",
+projectId:"alerta-rosko",
+messagingSenderId:"1022811358317",
+appId:"1:1022811358317:web:ce210848e7ed63d1412b64"
+
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -86,7 +123,7 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 
-/* REGISTRAR SERVICE WORKER */
+/* SERVICE WORKER */
 
 navigator.serviceWorker.register("/firebase-messaging-sw.js")
 .then((registration)=>{
@@ -96,7 +133,7 @@ messaging.useServiceWorker(registration);
 });
 
 
-/* OBTENER TOKEN */
+/* TOKEN */
 
 messaging.getToken({ vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw" })
 .then((token)=>{
@@ -116,12 +153,27 @@ body:JSON.stringify({ token })
 
 const mapa = L.map('mapa').setView([-33.503,-70.601],16);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-attribution:"OSM"
-}).addTo(mapa);
+L.tileLayer(
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{ attribution:"OSM" }
+).addTo(mapa);
 
 
-/* MOSTRAR ALERTA */
+/* MI UBICACION */
+
+navigator.geolocation.getCurrentPosition((pos)=>{
+
+const lat = pos.coords.latitude;
+const lng = pos.coords.longitude;
+
+L.marker([lat,lng]).addTo(mapa)
+.bindPopup("📍 Tu ubicación")
+.openPopup();
+
+});
+
+
+/* MARCADOR ALERTA */
 
 function mostrarAlerta(lat,lng,tipo){
 
@@ -161,7 +213,7 @@ lng
 }
 
 
-/* RECIBIR MENSAJE SERVICE WORKER */
+/* MENSAJE SERVICE WORKER */
 
 navigator.serviceWorker.addEventListener("message",(event)=>{
 
@@ -172,7 +224,11 @@ const audio=document.getElementById("sirena");
 audio.volume=1;
 audio.play().catch(()=>{});
 
-mostrarAlerta(event.data.lat,event.data.lng,event.data.tipo);
+mostrarAlerta(
+event.data.lat,
+event.data.lng,
+event.data.tipo
+);
 
 }
 
