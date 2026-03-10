@@ -1,158 +1,68 @@
-const express = require("express");
-const admin = require("firebase-admin");
+import express from "express";
+import cors from "cors";
+import admin from "firebase-admin";
+import bodyParser from "body-parser";
+import fs from "fs";
 
 const app = express();
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+app.use(bodyParser.json());
 app.use(express.static("public"));
 
-/* =========================
-   INICIALIZAR FIREBASE
-========================= */
+// Inicializa Firebase Admin
+const serviceAccount = JSON.parse(fs.readFileSync("./firebase-key.json", "utf-8"));
 
-let db;
-
-try {
-
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-
-  serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-
-  db = admin.firestore();
-
-  console.log("🔥 Firebase inicializado correctamente");
-
-} catch (err) {
-
-  console.log("❌ Error iniciando Firebase:", err);
-
-}
-
-
-/* =========================
-   REGISTRAR DISPOSITIVO
-========================= */
-
-app.post("/guardar-token", async (req, res) => {
-
-  const token = req.body.token;
-
-  if (!token) {
-    console.log("⚠️ Token vacío");
-    return res.json({ ok: false });
-  }
-
-  try {
-
-    await db.collection("tokens").doc(token).set({
-      token: token,
-      fecha: Date.now()
-    });
-
-    console.log("📱 Token guardado:", token.substring(0,25) + "...");
-
-    res.json({ ok: true });
-
-  } catch (err) {
-
-    console.log("❌ Error guardando token:", err);
-
-    res.json({ ok: false });
-
-  }
-
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
 });
 
+const db = admin.firestore();
 
-/* =========================
-   ENVIAR ALERTA
-========================= */
+// Registro de token
+app.post("/guardar-token", async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ success: false, msg: "No token" });
+  try {
+    await db.collection("tokens").doc(token).set({ createdAt: Date.now() });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
+// Enviar alerta
 app.post("/alerta", async (req, res) => {
-
   const { tipo, lat, lng } = req.body;
 
-  console.log("🚨 ALERTA:", tipo, lat, lng);
+  if (!tipo || !lat || !lng) return res.status(400).json({ success: false, msg: "Faltan datos" });
 
   try {
+    const tokensSnapshot = await db.collection("tokens").get();
+    const tokens = tokensSnapshot.docs.map(doc => doc.id);
 
-    const snapshot = await db.collection("tokens").get();
-
-    const tokens = [];
-
-    snapshot.forEach(doc => {
-      tokens.push(doc.data().token);
-    });
-
-    console.log("📡 Tokens encontrados:", tokens.length);
-
-    if (tokens.length === 0) {
-
-      console.log("⚠️ No hay dispositivos registrados");
-
-      return res.json({ success: false });
-
-    }
-
-    const response = await admin.messaging().sendEachForMulticast({
-
-      tokens: tokens,
-
-      webpush: {
-  headers: {
-    Urgency: "high"
-  },
-  notification: {
-    title: "🚨 Villa Segura",
-    body: "Alerta de " + tipo,
-    icon: "/icon.png"
-  }
-},
-
+    const payload = {
       data: {
-        tipo: tipo,
-        lat: String(lat),
-        lng: String(lng)
+        tipo,
+        lat: lat.toString(),
+        lng: lng.toString()
+      },
+      notification: {
+        title: `Alerta: ${tipo}`,
+        body: `Ubicación: ${lat}, ${lng}`,
+        icon: "/icon.png"
       }
+    };
 
-    });
+    await admin.messaging().sendToDevice(tokens, payload);
 
-    console.log("✅ Notificaciones enviadas:", response.successCount);
+    // Guardar alerta en Firestore para radar
+    await db.collection("alerts").add({ tipo, lat, lng, createdAt: Date.now() });
 
-    if(response.failureCount > 0){
-      console.log("❌ Fallidas:", response.failureCount);
-    }
-
-    res.json({
-      success: true,
-      enviados: response.successCount
-    });
-
-  } catch (err) {
-
-    console.log("❌ Error enviando alerta:", err);
-
-    res.json({ success: false });
-
+    res.json({ success: true });
+  } catch (e) {
+    console.log(e);
+    res.status(500).json({ success: false, error: e.message });
   }
-
 });
 
-
-/* =========================
-   PUERTO SERVIDOR
-========================= */
-
-const PORT = process.env.PORT || 10000;
-
-app.listen(PORT, () => {
-
-  console.log("🌐 Servidor corriendo en puerto", PORT);
-
-});
-
+app.listen(process.env.PORT || 8080, () => console.log("Server corriendo en puerto 8080"));
