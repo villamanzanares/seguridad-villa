@@ -8,7 +8,7 @@ const app = express();
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
 admin.initializeApp({
 credential: admin.credential.cert(serviceAccount)
@@ -81,3 +81,4 @@ const PORT = process.env.PORT || 8080;
 app.listen(PORT,()=>{
 console.log("Servidor corriendo en puerto",PORT);
 });
+
