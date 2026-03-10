@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <title>Villa Segura</title>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
 <style>
 
@@ -17,48 +15,88 @@ font-family:Arial;
 background:#111;
 color:white;
 text-align:center;
+margin:0;
+padding:0;
+}
+
+h1{
+margin-top:20px;
+}
+
+.contenedor{
+margin-top:40px;
 }
 
 button{
-width:90%;
-max-width:400px;
-padding:25px;
-margin:12px;
-font-size:22px;
+width:80%;
+max-width:300px;
+padding:20px;
+margin:10px;
+font-size:20px;
 border:none;
 border-radius:10px;
 color:white;
-transition:0.1s;
+cursor:pointer;
+transition:transform 0.1s;
 }
 
 button:active{
 transform:scale(0.95);
 }
 
-.emergencia{background:red}
-.robo{background:orange}
-.incendio{background:#ff4444}
-.asistencia{background:blue}
+.emergencia{background:#d32f2f;}
+.robo{background:#ff9800;}
+.incendio{background:#e53935;}
+.asistencia{background:#1976d2;}
 
 footer{
-margin-top:20px;
-color:#ccc;
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+background:#222;
+padding:15px;
+font-size:14px;
 }
 
 </style>
 
 </head>
 
+
 <body>
 
 <h1>🚨 Villa Segura</h1>
 
-<button class="emergencia" onclick="enviarAlerta('EMERGENCIA')">🚨 EMERGENCIA</button>
-<button class="robo" onclick="enviarAlerta('ROBO')">🕵️ ROBO</button>
-<button class="incendio" onclick="enviarAlerta('INCENDIO')">🔥 INCENDIO</button>
-<button class="asistencia" onclick="enviarAlerta('ASISTENCIA')">🆘 ASISTENCIA</button>
+<div class="contenedor">
 
-<footer id="estado">Iniciando...</footer>
+<button class="emergencia" onclick="enviarAlerta('EMERGENCIA')">
+🚨 EMERGENCIA
+</button>
+
+<button class="robo" onclick="enviarAlerta('ROBO')">
+🕵️ ROBO
+</button>
+
+<button class="incendio" onclick="enviarAlerta('INCENDIO')">
+🔥 INCENDIO
+</button>
+
+<button class="asistencia" onclick="enviarAlerta('ASISTENCIA')">
+🆘 ASISTENCIA
+</button>
+
+</div>
+
+
+<footer id="estado">
+INICIANDO...
+</footer>
+
+
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
 <script>
 
@@ -67,6 +105,7 @@ const firebaseConfig = {
 apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
 authDomain: "alerta-rosko.firebaseapp.com",
 projectId: "alerta-rosko",
+storageBucket: "alerta-rosko.appspot.com",
 messagingSenderId: "1022811358317",
 appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
 
@@ -76,77 +115,89 @@ firebase.initializeApp(firebaseConfig);
 
 const messaging = firebase.messaging();
 
-async function iniciar(){
 
-try{
+
+/* REGISTRAR SERVICE WORKER */
+
+navigator.serviceWorker.register("firebase-messaging-sw.js")
+.then(async (registration)=>{
+
+console.log("SW registrado");
 
 const permiso = await Notification.requestPermission();
 
 if(permiso !== "granted"){
 
-document.getElementById("estado").innerText =
-"Permiso de notificaciones denegado";
+document.getElementById("estado").innerText="Notificaciones bloqueadas";
 
 return;
 
 }
 
-const registroSW = await navigator.serviceWorker.register(
-"/firebase-messaging-sw.js"
-);
-
 const token = await messaging.getToken({
-  vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
-});
 
-vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-serviceWorkerRegistration:registroSW
+serviceWorkerRegistration:registration,
+vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
 
 });
 
 console.log("TOKEN:",token);
 
-document.getElementById("estado").innerText =
-"Dispositivo conectado";
-
 await fetch("/guardar-token",{
 
 method:"POST",
-
 headers:{
 "Content-Type":"application/json"
 },
 
-body:JSON.stringify({token})
+body:JSON.stringify({
+token:token
+})
 
 });
 
-console.log("Token enviado al servidor");
+document.getElementById("estado").innerText="Conectado";
 
-}catch(error){
+});
 
-console.log(error);
 
-document.getElementById("estado").innerText =
-"Error registrando dispositivo";
 
-}
+/* RECIBIR MENSAJE CON APP ABIERTA */
 
-}
+messaging.onMessage((payload)=>{
 
-iniciar();
+console.log("Mensaje recibido:",payload);
+
+const audio = new Audio(
+"https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
+);
+
+audio.play();
+
+alert(
+payload.notification.title +
+"\n" +
+payload.notification.body
+);
+
+});
+
+
+
+/* ENVIAR ALERTA */
 
 async function enviarAlerta(tipo){
 
+document.getElementById("estado").innerText="Enviando alerta...";
+
 navigator.geolocation.getCurrentPosition(async(pos)=>{
 
-const lat = pos.coords.latitude;
-const lng = pos.coords.longitude;
+const lat=pos.coords.latitude;
+const lng=pos.coords.longitude;
 
-await fetch("/alerta",{
+const res=await fetch("/alerta",{
 
 method:"POST",
-
 headers:{
 "Content-Type":"application/json"
 },
@@ -161,8 +212,19 @@ lng:lng
 
 });
 
-document.getElementById("estado").innerText =
-"Alerta "+tipo+" enviada";
+const data=await res.json();
+
+if(data.success){
+
+document.getElementById("estado").innerText=
+"Alerta enviada ✅";
+
+}else{
+
+document.getElementById("estado").innerText=
+"Error enviando alerta";
+
+}
 
 });
 
