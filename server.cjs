@@ -104,12 +104,15 @@ app.post("/alerta", async (req, res) => {
       tokens: tokens,
 
       webpush: {
-        notification: {
-          title: "🚨 Villa Segura",
-          body: "Alerta de " + tipo,
-          icon: "/icon.png"
-        }
-      },
+  headers: {
+    Urgency: "high"
+  },
+  notification: {
+    title: "🚨 Villa Segura",
+    body: "Alerta de " + tipo,
+    icon: "/icon.png"
+  }
+},
 
       data: {
         tipo: tipo,
@@ -152,3 +155,4 @@ app.listen(PORT, () => {
   console.log("🌐 Servidor corriendo en puerto", PORT);
 
 });
+
