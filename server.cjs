@@ -7,26 +7,44 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+/* =========================
+   INICIALIZAR FIREBASE
+========================= */
 
-serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+let db;
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+try {
 
-const db = admin.firestore();
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+
+  serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+
+  db = admin.firestore();
+
+  console.log("🔥 Firebase inicializado correctamente");
+
+} catch (err) {
+
+  console.log("❌ Error iniciando Firebase:", err);
+
+}
 
 
-/* REGISTRAR DISPOSITIVO */
+/* =========================
+   REGISTRAR DISPOSITIVO
+========================= */
 
 app.post("/guardar-token", async (req, res) => {
 
   const token = req.body.token;
 
   if (!token) {
-    console.log("Token vacío");
-    return res.json({ ok:false });
+    console.log("⚠️ Token vacío");
+    return res.json({ ok: false });
   }
 
   try {
@@ -36,28 +54,30 @@ app.post("/guardar-token", async (req, res) => {
       fecha: Date.now()
     });
 
-    console.log("Token guardado:", token);
+    console.log("📱 Token guardado:", token.substring(0,25) + "...");
 
-    res.json({ ok:true });
+    res.json({ ok: true });
 
-  } catch(err) {
+  } catch (err) {
 
-    console.log("Error guardando token:", err);
+    console.log("❌ Error guardando token:", err);
 
-    res.json({ ok:false });
+    res.json({ ok: false });
 
   }
 
 });
 
 
-/* ENVIAR ALERTA */
+/* =========================
+   ENVIAR ALERTA
+========================= */
 
 app.post("/alerta", async (req, res) => {
 
   const { tipo, lat, lng } = req.body;
 
-  console.log("ALERTA:", tipo, lat, lng);
+  console.log("🚨 ALERTA:", tipo, lat, lng);
 
   try {
 
@@ -69,13 +89,13 @@ app.post("/alerta", async (req, res) => {
       tokens.push(doc.data().token);
     });
 
-    console.log("Tokens encontrados:", tokens.length);
+    console.log("📡 Tokens encontrados:", tokens.length);
 
-    if(tokens.length === 0){
+    if (tokens.length === 0) {
 
-      console.log("No hay dispositivos registrados");
+      console.log("⚠️ No hay dispositivos registrados");
 
-      return res.json({ success:false });
+      return res.json({ success: false });
 
     }
 
@@ -99,29 +119,36 @@ app.post("/alerta", async (req, res) => {
 
     });
 
-    console.log("Enviados:", response.successCount);
+    console.log("✅ Notificaciones enviadas:", response.successCount);
+
+    if(response.failureCount > 0){
+      console.log("❌ Fallidas:", response.failureCount);
+    }
 
     res.json({
-      success:true,
-      enviados:response.successCount
+      success: true,
+      enviados: response.successCount
     });
 
-  } catch(err){
+  } catch (err) {
 
-    console.log("Error enviando alerta:", err);
+    console.log("❌ Error enviando alerta:", err);
 
-    res.json({ success:false });
+    res.json({ success: false });
 
   }
 
 });
 
 
+/* =========================
+   PUERTO SERVIDOR
+========================= */
+
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
 
-  console.log("Servidor corriendo en puerto", PORT);
+  console.log("🌐 Servidor corriendo en puerto", PORT);
 
 });
-
