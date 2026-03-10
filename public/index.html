@@ -79,6 +79,14 @@
     async function initFCM() {
       try {
         const token = await getToken(messaging, { vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw" });
+        fetch('/guardar-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ token })
+        });
+        
         console.log("Token FCM:", token);
         document.getElementById("footer").innerText = "Token FCM registrado ✅";
 
