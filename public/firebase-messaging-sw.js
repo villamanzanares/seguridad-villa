@@ -12,13 +12,13 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 
-/* NOTIFICACIÓN EN SEGUNDO PLANO */
-
-messaging.onBackgroundMessage(function(payload) {
+messaging.onBackgroundMessage(function(payload){
 
   const tipo = payload.data.tipo;
   const lat = payload.data.lat;
   const lng = payload.data.lng;
+
+  const url = "https://www.google.com/maps?q=" + lat + "," + lng;
 
   self.registration.showNotification("🚨 Villa Segura", {
 
@@ -26,8 +26,7 @@ messaging.onBackgroundMessage(function(payload) {
     icon: "/icon.png",
 
     data: {
-      lat: lat,
-      lng: lng
+      url: url
     }
 
   });
@@ -35,16 +34,11 @@ messaging.onBackgroundMessage(function(payload) {
 });
 
 
-/* CUANDO TOCAN LA NOTIFICACIÓN */
-
 self.addEventListener("notificationclick", function(event){
-
-  const lat = event.notification.data.lat;
-  const lng = event.notification.data.lng;
 
   event.notification.close();
 
-  const url = "https://www.google.com/maps?q=" + lat + "," + lng;
+  const url = event.notification.data.url;
 
   event.waitUntil(
     clients.openWindow(url)
