@@ -13,14 +13,12 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-let tokens = [];
+const db = admin.firestore();
 
 
-/* REGISTRO DE DISPOSITIVO */
+/* REGISTRAR DISPOSITIVO */
 
-app.post("/guardar-token", (req, res) => {
-
-  console.log("BODY RECIBIDO:", req.body);
+app.post("/guardar-token", async (req, res) => {
 
   const token = req.body.token;
 
@@ -29,22 +27,29 @@ app.post("/guardar-token", (req, res) => {
     return res.json({ ok:false });
   }
 
-  if (!tokens.includes(token)) {
+  try {
 
-    tokens.push(token);
+    await db.collection("tokens").doc(token).set({
+      token: token,
+      fecha: Date.now()
+    });
 
-    console.log("Nuevo dispositivo:", token);
+    console.log("Token guardado:", token);
+
+    res.json({ ok:true });
+
+  } catch(err) {
+
+    console.log("Error guardando token:", err);
+
+    res.json({ ok:false });
 
   }
-
-  console.log("Tokens registrados:", tokens.length);
-
-  res.json({ ok:true });
 
 });
 
 
-/* ENVÍO DE ALERTA */
+/* ENVIAR ALERTA */
 
 app.post("/alerta", async (req, res) => {
 
@@ -52,17 +57,25 @@ app.post("/alerta", async (req, res) => {
 
   console.log("ALERTA:", tipo, lat, lng);
 
-  if (tokens.length === 0) {
+  try {
 
-    console.log("No hay dispositivos registrados");
+    const snapshot = await db.collection("tokens").get();
 
-    return res.json({
-      success:false
+    const tokens = [];
+
+    snapshot.forEach(doc => {
+      tokens.push(doc.data().token);
     });
 
-  }
+    console.log("Tokens encontrados:", tokens.length);
 
-  try {
+    if(tokens.length === 0){
+
+      console.log("No hay dispositivos registrados");
+
+      return res.json({ success:false });
+
+    }
 
     const response = await admin.messaging().sendEachForMulticast({
 
@@ -91,13 +104,11 @@ app.post("/alerta", async (req, res) => {
       enviados:response.successCount
     });
 
-  } catch(error) {
+  } catch(err){
 
-    console.log("Error FCM:", error);
+    console.log("Error enviando alerta:", err);
 
-    res.json({
-      success:false
-    });
+    res.json({ success:false });
 
   }
 
