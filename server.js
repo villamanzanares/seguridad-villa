@@ -1,7 +1,7 @@
-// server.js - versión lista para Render con debug
+// server.js - versión Render con fetch y Server Key
 import express from "express";
 import bodyParser from "body-parser";
-import admin from "firebase-admin";
+import fetch from "node-fetch"; // si Node <18, instala: npm install node-fetch
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -9,22 +9,10 @@ const PORT = process.env.PORT || 8080;
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-// Inicializar Firebase Admin desde variable de entorno
-let serviceAccount;
-try {
-  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-  console.log("Firebase Admin inicializado ✅");
-} catch (err) {
-  console.error("Error inicializando Firebase Admin. Revisa FIREBASE_SERVICE_ACCOUNT_JSON:", err);
-}
+// Tu Server Key de Firebase (del proyecto FCM)
+// ⚠️ Mantén esta key privada, puedes guardarla en Render como variable FIREBASE_SERVER_KEY
+const FIREBASE_SERVER_KEY = process.env.FIREBASE_SERVER_KEY;
 
-// Referencia a Firestore
-const db = admin.firestore();
-
-// Endpoint para recibir alertas desde frontend
 app.post("/alerta", async (req, res) => {
   const { tipo, usuario } = req.body;
 
@@ -33,31 +21,45 @@ app.post("/alerta", async (req, res) => {
   }
 
   try {
-    // Obtener todos los tokens registrados en Firestore
+    // Obtener todos los tokens desde Firestore (simulación si quieres, o con tu DB)
+    // Aquí suponemos que tienes la colección "tokens" en Firestore y guardaste los tokens
+    const admin = await import("firebase-admin");
+    const db = admin.firestore();
+
     const snapshot = await db.collection("tokens").get();
     const tokens = snapshot.docs.map(doc => doc.data().token);
 
     if (tokens.length === 0) {
-      console.log("No hay tokens registrados en Firestore");
+      console.log("No hay tokens registrados");
       return res.status(200).json({ success: true, message: "No hay tokens registrados" });
     }
 
     // Payload de la notificación
     const payload = {
+      registration_ids: tokens,
       notification: {
         title: tipo,
         body: `Usuario: ${usuario}`,
       },
     };
 
-    // Enviar notificación a todos los tokens
-    const response = await admin.messaging().sendToDevice(tokens, payload);
-    console.log(`Alerta enviada a ${tokens.length} token(s) ✅`, response);
+    // Llamada HTTP a FCM
+    const fcmResponse = await fetch("https://fcm.googleapis.com/fcm/send", {
+      method: "POST",
+      headers: {
+        "Authorization": `key=${FIREBASE_SERVER_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-    res.status(200).json({ success: true, message: "Alerta enviada ✅" });
+    const data = await fcmResponse.json();
+    console.log("FCM response:", data);
+
+    res.status(200).json({ success: true, message: "Alerta enviada ✅", fcm: data });
 
   } catch (err) {
-    console.error("Error enviando alerta FCM:", err);
+    console.error("Error enviando alerta:", err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
