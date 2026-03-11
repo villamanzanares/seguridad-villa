@@ -1,185 +1,230 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Villa Segura</title>
-  <link rel="stylesheet" href="/estilos.css">
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    .boton {
-      font-size: 18px;
-      font-weight: bold;
-      color: #fff;
-      border: none;
-      padding: 20px;
-      margin: 5px 0;
-      cursor: pointer;
-      transition: transform 0.1s ease;
-    }
+<title>Villa Segura</title>
 
-    .boton:active {
-      transform: scale(0.95);
-    }
+<style>
 
-    #btn-emergencia {
-      background-color: #d32f2f;
-      border-radius: 15px 15px 0 0;
-      width: 100%;
-    }
+body{
+margin:0;
+font-family:Arial;
+background:#f2f2f2;
+display:flex;
+flex-direction:column;
+height:100vh;
+}
 
-    #fila2 {
-      display: flex;
-      width: 100%;
-    }
+.boton{
+font-size:18px;
+font-weight:bold;
+color:#fff;
+border:none;
+padding:20px;
+margin:5px 0;
+cursor:pointer;
+transition:transform 0.1s ease;
+}
 
-    #btn-ambulancia {
-      background-color: #388e3c;
-      width: 50%;
-      border-radius: 0;
-    }
+.boton:active{
+transform:scale(0.95);
+}
 
-    #btn-bomberos {
-      background-color: #f57c00;
-      width: 50%;
-      border-radius: 0;
-    }
+#btn-emergencia{
+background:#d32f2f;
+border-radius:15px 15px 0 0;
+width:100%;
+}
 
-    #btn-carabineros {
-      background-color: #1976d2;
-      border-radius: 0 0 15px 15px;
-      width: 100%;
-    }
+#fila2{
+display:flex;
+width:100%;
+}
 
-    #footer {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      background-color: #222;
-      color: #fff;
-      padding: 10px;
-      font-size: 16px;
-      box-sizing: border-box;
-      max-height: 100px;
-      overflow-wrap: break-word;
-    }
+#btn-ambulancia{
+background:#388e3c;
+width:50%;
+}
 
-    @media (max-width: 768px) {
-      #footer {
-        font-size: 14px;
-        padding: 8px;
-      }
-    }
-  </style>
+#btn-bomberos{
+background:#f57c00;
+width:50%;
+}
+
+#btn-carabineros{
+background:#1976d2;
+border-radius:0 0 15px 15px;
+width:100%;
+}
+
+#footer{
+position:fixed;
+bottom:0;
+width:100%;
+background:#222;
+color:#fff;
+padding:10px;
+font-size:16px;
+box-sizing:border-box;
+}
+
+</style>
+
 </head>
+
 <body>
 
-  <!-- Botón EMERGENCIA -->
-  <button id="btn-emergencia" class="boton">EMERGENCIA</button>
+<button id="btn-emergencia" class="boton">EMERGENCIA</button>
 
-  <!-- Fila 2: AMBULANCIA y BOMBEROS -->
-  <div id="fila2">
-    <button id="btn-ambulancia" class="boton">AMBULANCIA</button>
-    <button id="btn-bomberos" class="boton">BOMBEROS</button>
-  </div>
+<div id="fila2">
+<button id="btn-ambulancia" class="boton">AMBULANCIA</button>
+<button id="btn-bomberos" class="boton">BOMBEROS</button>
+</div>
 
-  <!-- Botón CARABINEROS -->
-  <button id="btn-carabineros" class="boton">CARABINEROS</button>
+<button id="btn-carabineros" class="boton">CARABINEROS</button>
 
-  <!-- Footer dinámico -->
-  <div id="footer">Esperando alerta...</div>
+<div id="footer">Esperando alerta...</div>
 
-  <!-- Sonido -->
-  <audio id="sirena" src="/sirena.mp3"></audio>
+<audio id="sirena" src="/sirena.mp3"></audio>
 
-  <!-- Firebase y lógica de alertas -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+<script type="module">
 
-    // Config Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-      authDomain: "alerta-rosko.firebaseapp.com",
-      projectId: "alerta-rosko",
-      messagingSenderId: "1022811358317",
-      appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-    };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging.js";
 
-    const app = initializeApp(firebaseConfig);
-    const messaging = getMessaging(app);
-    const db = getFirestore(app);
+/* configuración firebase */
 
-    const usuario = "Usuario1"; // Cambiar según usuario real
-    const sirena = document.getElementById("sirena");
-    const footer = document.getElementById("footer");
+const firebaseConfig = {
 
-    // Inicializar FCM
-    async function initFCM() {
-      try {
-        const permission = await Notification.requestPermission();
-        if(permission !== "granted") return console.log("Notificaciones denegadas");
+apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+authDomain: "alerta-rosko.firebaseapp.com",
+projectId: "alerta-rosko",
+messagingSenderId: "1022811358317",
+appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
 
-        const token = await getToken(messaging, { vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw" });
-        console.log("Token FCM:", token);
+};
 
-        // Guardar token en Firestore
-        await setDoc(doc(db, "tokens", usuario), { token });
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
 
-      } catch(err) {
-        console.error("Error inicializando FCM:", err);
-      }
-    }
+const usuario = "Usuario1";
 
-    initFCM();
+const footer = document.getElementById("footer");
+const sirena = document.getElementById("sirena");
 
-    // Recibir mensajes en foreground
-    onMessage(messaging, payload => {
-      console.log("Mensaje recibido:", payload);
-      mostrarAlerta(payload.notification.title, payload.notification.body);
-    });
+/* iniciar FCM */
 
-    function mostrarAlerta(titulo, body) {
-      footer.innerHTML = `<b>${titulo}</b><br>${body}`;
-      reproducirSonido();
-    }
+async function iniciarFCM(){
 
-    function reproducirSonido() {
-      sirena.currentTime = 0;
-      sirena.play().catch(e => console.log("Error reproducir sonido:", e));
-    }
+try{
 
-    // Función para enviar alerta (click de botones)
-    async function enviarAlerta(tipo) {
-      mostrarAlerta(tipo, `Usuario: ${usuario}`);
-      reproducirSonido();
+const permiso = await Notification.requestPermission();
 
-      try {
-        await fetch("/alerta", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tipo, usuario })
-        });
-      } catch(err) {
-        console.error("Error enviando alerta:", err);
-      }
-    }
+if(permiso !== "granted"){
+console.log("Permiso notificaciones denegado");
+return;
+}
 
-    // Event listeners botones
-    document.getElementById("btn-emergencia").addEventListener("click", () => enviarAlerta("EMERGENCIA"));
-    document.getElementById("btn-ambulancia").addEventListener("click", () => enviarAlerta("AMBULANCIA"));
-    document.getElementById("btn-bomberos").addEventListener("click", () => enviarAlerta("BOMBEROS"));
-    document.getElementById("btn-carabineros").addEventListener("click", () => enviarAlerta("CARABINEROS"));
+const token = await getToken(messaging,{
+vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
+});
 
-  </script>
+console.log("Token FCM:",token);
+
+/* suscribir al topic vecinos */
+
+await fetch("/subscribe",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({token})
+});
+
+console.log("Dispositivo registrado en vecinos");
+
+}catch(err){
+
+console.error("Error FCM:",err);
+
+}
+
+}
+
+iniciarFCM();
+
+/* recibir alertas */
+
+onMessage(messaging,(payload)=>{
+
+console.log("Alerta recibida:",payload);
+
+mostrarAlerta(
+payload.notification.title,
+payload.notification.body
+);
+
+});
+
+/* mostrar alerta */
+
+function mostrarAlerta(titulo,mensaje){
+
+footer.innerHTML = "<b>"+titulo+"</b><br>"+mensaje;
+
+sirena.currentTime = 0;
+
+sirena.play().catch(()=>{});
+
+}
+
+/* enviar alerta */
+
+async function enviarAlerta(tipo){
+
+mostrarAlerta(tipo,"Usuario: "+usuario);
+
+try{
+
+await fetch("/alerta",{
+
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+tipo,
+usuario
+})
+
+});
+
+}catch(err){
+
+console.error("Error enviando alerta:",err);
+
+}
+
+}
+
+/* botones */
+
+document.getElementById("btn-emergencia")
+.addEventListener("click",()=>enviarAlerta("EMERGENCIA"));
+
+document.getElementById("btn-ambulancia")
+.addEventListener("click",()=>enviarAlerta("AMBULANCIA"));
+
+document.getElementById("btn-bomberos")
+.addEventListener("click",()=>enviarAlerta("BOMBEROS"));
+
+document.getElementById("btn-carabineros")
+.addEventListener("click",()=>enviarAlerta("CARABINEROS"));
+
+</script>
+
 </body>
 </html>
