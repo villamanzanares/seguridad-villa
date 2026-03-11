@@ -1,81 +1,48 @@
 import express from "express";
-import cors from "cors";
 import admin from "firebase-admin";
-import dotenv from "dotenv";
-import fs from "fs";
-
-dotenv.config();
+import cors from "cors";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
 
-// Inicializar Firebase Admin
-const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_JSON || "{}");
-
+// Inicialización Firebase con la variable única
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert(serviceAccount)
 });
 
-const db = admin.firestore();
-
-// Endpoint para guardar token de dispositivo
+// Endpoints
 app.post("/guardar-token", async (req, res) => {
+  const { token, usuario } = req.body;
   try {
-    const { token } = req.body;
-    if (!token) return res.status(400).json({ success: false, error: "Token requerido" });
-
-    await db.collection("tokens").doc(token).set({ token });
-    console.log("📱 Token guardado:", token);
+    await admin.firestore().collection("tokens").doc(usuario).set({ token });
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// Endpoint para enviar alerta a todos los tokens
 app.post("/alerta", async (req, res) => {
+  const { tipo, usuario } = req.body;
   try {
-    const { tipo, nombre, telefono, casa } = req.body;
-    if (!tipo || !nombre || !telefono || !casa)
-      return res.status(400).json({ success: false, error: "Faltan datos" });
+    const tokensSnap = await admin.firestore().collection("tokens").get();
+    const tokens = tokensSnap.docs.map(doc => doc.data().token);
 
-    // Guardar alerta en Firestore (opcional)
-    const docRef = await db.collection("alerts").add({
-      tipo,
-      nombre,
-      telefono,
-      casa,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    const message = {
+      notification: {
+        title: `Alerta: ${tipo}`,
+        body: `Usuario: ${usuario}`
+      },
+      tokens
+    };
 
-    // Enviar push a todos los tokens
-    const tokensSnapshot = await db.collection("tokens").get();
-    const tokens = tokensSnapshot.docs.map(doc => doc.id);
-    if (tokens.length > 0) {
-      const message = {
-        notification: {
-          title: `Alerta: ${tipo}`,
-          body: `${nombre} - ${telefono} - ${casa}`,
-        },
-        data: { tipo, nombre, telefono, casa },
-        tokens,
-      };
-      await admin.messaging().sendMulticast(message);
-      console.log("✅ Alerta enviada a todos los dispositivos");
-    }
-
-    res.json({ success: true, id: docRef.id });
+    await admin.messaging().sendMulticast(message);
+    res.json({ success: true });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// Arrancar servidor
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en puerto ${PORT} ✅`);
-});
+app.listen(PORT, () => console.log(`Server escuchando en puerto ${PORT}`));
