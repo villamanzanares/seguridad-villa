@@ -1,5 +1,5 @@
 import express from "express";
-import fetch from "node-fetch";
+import admin from "firebase-admin";
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -7,84 +7,69 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json());
 app.use(express.static("public"));
 
-// Server Key desde Render
-const FIREBASE_SERVER_KEY = process.env.FIREBASE_SERVER_KEY;
+/* iniciar firebase admin */
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
-// Token de prueba (tu PC)
-const TOKENS = [
-"ejPSCL5eewe-FLzRn8iZIK:APA91bFlv5bBZ000RU7cDvybLSR0mxsVYZeparjP-NNOGa3yBYfQY0M4NWFRUyR7sY2hE9qBbOZT2Inffd-NeNDDtoLtJ6248FU0jdmNr3QilnQJmXfMRjI"
-];
-
-app.post("/alerta", async (req, res) => {
-
-const { tipo, usuario } = req.body;
-
-if(!tipo || !usuario){
-return res.status(400).json({error:"Datos incompletos"});
-}
-
-console.log("Alerta recibida:", tipo, usuario);
-
-try{
-
-const payload = {
-registration_ids: TOKENS,
-notification:{
-title: tipo,
-body: `Usuario: ${usuario}`
-}
-};
-
-const response = await fetch(
-"https://fcm.googleapis.com/fcm/send",
-{
-method:"POST",
-headers:{
-"Authorization": `key=${FIREBASE_SERVER_KEY}`,
-"Content-Type":"application/json"
-},
-body: JSON.stringify(payload)
-}
-);
-
-const text = await response.text();
-
-console.log("Respuesta FCM cruda:");
-console.log(text);
-
-// intentar convertir a JSON
-let data;
-
-try{
-data = JSON.parse(text);
-}catch{
-console.log("Respuesta no es JSON (probablemente error de clave)");
-return res.status(500).json({
-error:"FCM respondió HTML",
-detalle:text.substring(0,200)
-});
-}
-
-console.log("Respuesta FCM JSON:", data);
-
-res.json({
-success:true,
-fcm:data
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
 });
 
-}catch(error){
+console.log("Firebase Admin iniciado ✅");
 
-console.error("Error enviando alerta:", error);
+/* registrar dispositivo en el topic */
+app.post("/subscribe", async (req,res)=>{
 
-res.status(500).json({
-error:"Error enviando alerta",
-detalle:error.message
-});
+  const { token } = req.body;
 
-}
+  try{
+
+    await admin.messaging().subscribeToTopic(token,"vecinos");
+
+    console.log("Token suscrito al topic vecinos");
+
+    res.json({ ok:true });
+
+  }catch(err){
+
+    console.error("Error suscripción:",err);
+
+    res.status(500).json({ error: err.message });
+
+  }
 
 });
 
-app.listen(PORT, ()=>{
-console.log("Servidor iniciado en puerto", PORT);
+/* enviar alerta */
+app.post("/alerta", async (req,res)=>{
+
+  const { tipo, usuario } = req.body;
+
+  try{
+
+    const message = {
+      notification:{
+        title: tipo,
+        body:`Usuario: ${usuario}`
+      },
+      topic:"vecinos"
+    };
+
+    const response = await admin.messaging().send(message);
+
+    console.log("Alerta enviada:",response);
+
+    res.json({ success:true });
+
+  }catch(err){
+
+    console.error("Error FCM:",err);
+
+    res.status(500).json({ error:err.message });
+
+  }
+
+});
+
+app.listen(PORT,()=>{
+  console.log("Servidor activo en puerto",PORT);
 });
