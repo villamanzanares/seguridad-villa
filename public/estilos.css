@@ -1,0 +1,83 @@
+/* Reset básico */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f2f2f2;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* Botones generales */
+.boton {
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  border: none;
+  padding: 20px;
+  margin: 5px 0;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.boton:active {
+  transform: scale(0.95);
+}
+
+/* EMERGENCIA */
+#btn-emergencia {
+  background-color: #d32f2f;
+  border-radius: 15px 15px 0 0;
+  width: 100%;
+}
+
+/* Fila 2: AMBULANCIA y BOMBEROS */
+#fila2 {
+  display: flex;
+  width: 100%;
+}
+
+#btn-ambulancia {
+  background-color: #388e3c;
+  width: 50%;
+  border-radius: 0;
+}
+
+#btn-bomberos {
+  background-color: #f57c00;
+  width: 50%;
+  border-radius: 0;
+}
+
+/* CARABINEROS */
+#btn-carabineros {
+  background-color: #1976d2;
+  border-radius: 0 0 15px 15px;
+  width: 100%;
+}
+
+/* Footer dinámico */
+#footer {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background-color: #222;
+  color: #fff;
+  padding: 10px;
+  font-size: 16px;
+  max-height: 100px;
+  overflow-wrap: break-word;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  #footer {
+    font-size: 14px;
+    padding: 8px;
+  }
+}
