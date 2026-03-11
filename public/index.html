@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -161,10 +162,10 @@ onMessage(messaging,(payload)=>{
 
 console.log("Alerta recibida:",payload);
 
-mostrarAlerta(
-payload.notification.title,
-payload.notification.body
-);
+const titulo = payload.notification?.title || "ALERTA";
+const mensaje = payload.notification?.body || "Vecino en emergencia";
+
+mostrarAlerta(titulo,mensaje);
 
 });
 
@@ -172,10 +173,12 @@ payload.notification.body
 
 function mostrarAlerta(titulo,mensaje){
 
-footer.innerHTML = "<b>"+titulo+"</b><br>"+mensaje;
+footer.innerHTML = `
+<b>${titulo}</b><br>
+${mensaje}
+`;
 
 sirena.currentTime = 0;
-
 sirena.play().catch(()=>{});
 
 }
@@ -184,7 +187,9 @@ sirena.play().catch(()=>{});
 
 async function enviarAlerta(tipo){
 
-mostrarAlerta(tipo,"Usuario: "+usuario);
+const mensajeLocal = "Usuario: " + usuario;
+
+mostrarAlerta(tipo,mensajeLocal);
 
 try{
 
@@ -228,3 +233,4 @@ document.getElementById("btn-carabineros")
 
 </body>
 </html>
+```
