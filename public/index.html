@@ -1,232 +1,81 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Villa Segura</title>
 
-<style>
+<link rel="stylesheet" href="styles.css">
 
-body{
-margin:0;
-font-family:Arial;
-background:#f2f2f2;
-display:flex;
-flex-direction:column;
-height:200vh;
-}
-
-.boton{
-font-size:18px;
-font-weight:bold;
-color:#fff;
-border:none;
-padding:20px;
-margin:5px 0;
-cursor:pointer;
-transition:transform 0.1s ease;
-}
-
-.boton:active{
-transform:scale(0.95);
-}
-
-#btn-emergencia{
-background:#d32f2f;
-border-radius:15px 15px 0 0;
-width:100%;
-}
-
-#fila2{
-display:flex;
-width:100%;
-}
-
-#btn-ambulancia{
-background:#388e3c;
-width:50%;
-}
-
-#btn-bomberos{
-background:#f57c00;
-width:50%;
-}
-
-#btn-carabineros{
-background:#1976d2;
-border-radius:0 0 15px 15px;
-width:100%;
-}
-
-#footer{
-position:fixed;
-bottom:0;
-width:200%;
-background:#222;
-color:#fff;
-padding:10px;
-font-size:16px;
-box-sizing:border-box;
-}
-
-</style>
+<link rel="icon" href="favicon.ico">
 
 </head>
 
 <body>
 
-<button id="btn-emergencia" class="boton">EMERGENCIA</button>
-
-<div id="fila2">
-<button id="btn-ambulancia" class="boton">AMBULANCIA</button>
-<button id="btn-bomberos" class="boton">BOMBEROS</button>
+<div class="header">
+<img src="icon.png" class="logo">
+<h1>Villa Segura</h1>
 </div>
 
-<button id="btn-carabineros" class="boton">CARABINEROS</button>
+<div class="botonera">
 
-<div id="footer">Esperando alerta...</div>
+<button class="btn emergencia" onclick="enviarAlerta('EMERGENCIA')">
+🚨 EMERGENCIA
+</button>
 
-<audio id="sirena" src="/sirena.mp3"></audio>
+<div class="fila">
 
-<script type="module">
+<button class="btn ambulancia" onclick="enviarAlerta('AMBULANCIA')">
+🚑 AMBULANCIA
+</button>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging.js";
+<button class="btn bomberos" onclick="enviarAlerta('BOMBEROS')">
+🚒 BOMBEROS
+</button>
 
-/* configuración firebase */
+</div>
 
-const firebaseConfig = {
+<button class="btn carabineros" onclick="enviarAlerta('CARABINEROS')">
+👮 CARABINEROS
+</button>
 
-apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-authDomain: "alerta-rosko.firebaseapp.com",
-projectId: "alerta-rosko",
-messagingSenderId: "1022811358317",
-appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+</div>
 
-};
+<div id="footer">
+Sistema listo
+</div>
 
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-
-const usuario = "Usuario1";
-
-const footer = document.getElementById("footer");
-const sirena = document.getElementById("sirena");
-
-/* iniciar FCM */
-
-async function iniciarFCM(){
-
-try{
-
-const permiso = await Notification.requestPermission();
-
-if(permiso !== "granted"){
-console.log("Permiso notificaciones denegado");
-return;
-}
-
-const token = await getToken(messaging,{
-vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
-});
-
-console.log("Token FCM:",token);
-
-/* suscribir al topic vecinos */
-
-await fetch("/subscribe",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({token})
-});
-
-console.log("Dispositivo registrado en vecinos");
-
-}catch(err){
-
-console.error("Error FCM:",err);
-
-}
-
-}
-
-iniciarFCM();
-
-/* recibir alertas */
-
-onMessage(messaging,(payload)=>{
-
-console.log("Alerta recibida:",payload);
-
-const titulo = payload.notification?.title || "ALERTA";
-const mensaje = payload.notification?.body || "Vecino en emergencia";
-
-mostrarAlerta(titulo,mensaje);
-
-});
-
-/* mostrar alerta */
-
-function mostrarAlerta(titulo,mensaje){
-
-footer.innerHTML = `
-<b>${titulo}</b><br>
-${mensaje}
-`;
-
-sirena.currentTime = 0;
-sirena.play().catch(()=>{});
-
-}
-
-/* enviar alerta */
+<script>
 
 async function enviarAlerta(tipo){
 
-const mensajeLocal = "Usuario: " + usuario;
-
-mostrarAlerta(tipo,mensajeLocal);
+document.getElementById("footer").innerText =
+"Enviando alerta " + tipo + "...";
 
 try{
 
-await fetch("/alerta",{
-
+const res = await fetch("/alerta",{
 method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-tipo,
-usuario
-})
-
+headers:{ "Content-Type":"application/json"},
+body:JSON.stringify({ tipo })
 });
 
-}catch(err){
+const data = await res.json();
 
-console.error("Error enviando alerta:",err);
+document.getElementById("footer").innerText =
+"Alerta " + tipo + " enviada ✅";
+
+}catch(e){
+
+document.getElementById("footer").innerText =
+"Error enviando alerta ❌";
 
 }
 
 }
-
-/* botones */
-
-document.getElementById("btn-emergencia")
-.addEventListener("click",()=>enviarAlerta("EMERGENCIA"));
-
-document.getElementById("btn-ambulancia")
-.addEventListener("click",()=>enviarAlerta("AMBULANCIA"));
-
-document.getElementById("btn-bomberos")
-.addEventListener("click",()=>enviarAlerta("BOMBEROS"));
-
-document.getElementById("btn-carabineros")
-.addEventListener("click",()=>enviarAlerta("CARABINEROS"));
 
 </script>
 
