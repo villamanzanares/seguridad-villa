@@ -1,199 +1,60 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Villa Segura</title>
-<link rel="stylesheet" href="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js">
-<link rel="stylesheet" href="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js">
-<style>
-  body {
-    margin: 0;
-    font-family: sans-serif;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    background: #f5f5f5;
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+// Config de Firebase (tu proyecto)
+const firebaseConfig = {
+  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+  authDomain: "alerta-rosko.firebaseapp.com",
+  projectId: "alerta-rosko",
+  messagingSenderId: "1022811358317",
+  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+};
+
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+const db = getFirestore(app);
+
+// Pide permiso para notificaciones
+async function initFCM(usuario) {
+  try {
+    const permission = await Notification.requestPermission();
+    if(permission !== "granted") {
+      console.log("Permiso de notificaciones denegado");
+      return;
+    }
+
+    const token = await getToken(messaging, { vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw" });
+    console.log("Token FCM:", token);
+
+    // Guardar token en Firestore
+    await setDoc(doc(db, "tokens", usuario), { token });
+
+  } catch(err) {
+    console.error("Error inicializando FCM:", err);
   }
+}
 
-  header {
-    text-align: center;
-    padding: 10px;
-    background: #fff;
-    border-bottom: 1px solid #ccc;
-  }
+// Escuchar mensajes mientras la app está abierta
+onMessage(messaging, (payload) => {
+  console.log("Mensaje recibido:", payload);
+  mostrarAlertaEnFooter(payload.notification.title, payload.notification.body);
+  reproducirSonido();
+});
 
-  header img {
-    height: 50px;
-    vertical-align: middle;
-  }
+// Funciones auxiliares
+function mostrarAlertaEnFooter(titulo, body) {
+  const footer = document.getElementById("footer");
+  footer.innerHTML = `<b>${titulo}</b><br>${body}`;
+}
 
-  header h1 {
-    display: inline-block;
-    margin: 0 0 0 10px;
-    vertical-align: middle;
-    font-size: 1.5em;
-    color: #333;
-  }
+function reproducirSonido() {
+  const sirena = new Audio('/sirena.mp3');
+  sirena.play().catch(e => console.log("Error al reproducir sonido:", e));
+}
 
-  .buttons {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 10px;
-    gap: 10px;
-  }
-
-  button {
-    padding: 20px;
-    font-size: 18px;
-    font-weight: bold;
-    cursor: pointer;
-    border: none;
-    color: #fff;
-    transition: all 0.1s ease;
-    box-shadow: 0 4px #999;
-  }
-
-  /* Animación de presión */
-  button:active {
-    transform: scale(0.98);
-    box-shadow: 0 2px #666;
-  }
-
-  /* Fila 1: EMERGENCIA */
-  .emergencia {
-    background: #e53935;
-    border-radius: 12px 12px 0 0;
-    width: 100%;
-  }
-
-  /* Fila 2: AMBULANCIA y BOMBEROS */
-  .medio {
-    display: flex;
-    gap: 10px;
-  }
-
-  .medio button {
-    flex: 1;
-    border-radius: 0;
-  }
-
-  .ambulancia {
-    background: #43a047;
-  }
-
-  .bomberos {
-    background: #fb8c00;
-  }
-
-  /* Fila 3: CARABINEROS */
-  .carabineros {
-    background: #1e88e5;
-    border-radius: 0 0 12px 12px;
-    width: 100%;
-  }
-
-  footer {
-    padding: 10px;
-    text-align: center;
-    background: #fff;
-    border-top: 1px solid #ccc;
-    font-size: 1em;
-  }
-</style>
-</head>
-<body>
-<header>
-  <img src="icon.png" alt="Logo">
-  <h1>Villa Segura</h1>
-</header>
-
-<div class="buttons">
-  <button class="emergencia" onclick="enviarAlerta('EMERGENCIA')">EMERGENCIA</button>
-  <div class="medio">
-    <button class="ambulancia" onclick="enviarAlerta('AMBULANCIA')">AMBULANCIA</button>
-    <button class="bomberos" onclick="enviarAlerta('BOMBEROS')">BOMBEROS</button>
-  </div>
-  <button class="carabineros" onclick="enviarAlerta('CARABINEROS')">CARABINEROS</button>
-</div>
-
-<footer id="footer">Esperando alerta...</footer>
-
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
-<script>
-  // Configuración Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-    authDomain: "alerta-rosko.firebaseapp.com",
-    projectId: "alerta-rosko",
-    messagingSenderId: "1022811358317",
-    appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const messaging = firebase.messaging();
-
-  // Registrar token
-  messaging.requestPermission()
-    .then(() => messaging.getToken())
-    .then(token => {
-      fetch("/guardar-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token })
-      });
-    })
-    .catch(err => console.log("Token no disponible:", err));
-
-  // Sonido nativo
-  const sonido = new Audio('sirena.mp3');
-
-  function reproducirSonido() {
-    sonido.currentTime = 0;
-    sonido.play().catch(err => console.log("Error al reproducir sonido:", err));
-  }
-
-  // Footer dinámico
-  function actualizarFooter(tipo, nombre, telefono, casa) {
-    document.getElementById('footer').innerHTML =
-      `<strong>${tipo}</strong><br>${nombre}<br>${telefono}<br>${casa}`;
-  }
-
-  // Enviar alerta
-  function enviarAlerta(tipo) {
-    const usuario = {
-      nombre: "Juan García",
-      telefono: "+569xxxxxxx",
-      casa: "Casa 12"
-    };
-
-    fetch("/alerta", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tipo, ...usuario })
-    }).then(res => res.json())
-      .then(data => {
-        actualizarFooter(tipo, usuario.nombre, usuario.telefono, usuario.casa);
-        reproducirSonido();
-
-        // Si no es EMERGENCIA, abrir teclado con número de ayuda
-        if (tipo !== "EMERGENCIA") {
-          let numeroEmergencia = tipo === "AMBULANCIA" ? "131" :
-                                 tipo === "BOMBEROS" ? "132" :
-                                 tipo === "CARABINEROS" ? "133" : "";
-          if (numeroEmergencia) window.location.href = `tel:${numeroEmergencia}`;
-        }
-      });
-  }
-
-  // FCM primer plano
-  messaging.onMessage(payload => {
-    const data = payload.data;
-    actualizarFooter(data.tipo, data.nombre, data.telefono, data.casa);
-    reproducirSonido();
-  });
+// Inicializar FCM para un usuario
+const usuario = "Usuario1"; // Cambiar según el usuario real
+initFCM(usuario);
 </script>
-</body>
-</html>
