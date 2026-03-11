@@ -1,5 +1,5 @@
-importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
@@ -11,45 +11,27 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Notificación en background
-messaging.onBackgroundMessage(payload => {
-  const data = payload.data;
-  self.registration.showNotification(`Alerta: ${data.tipo}`, {
-    body: `${data.nombre} - ${data.telefono} - ${data.casa}`,
-    icon: '/icon.png',
-    vibrate: [200, 100, 200],
-    tag: 'alerta-rosko'
-  });
+// Cache version para forzar actualización
+const CACHE_NAME = 'villa-segura-v3';
+
+self.addEventListener('install', event => {
+  self.skipWaiting();
 });
 
-// Al tocar la notificación
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
+self.addEventListener('activate', event => {
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then(windowClients => {
-      for (let client of windowClients) {
-        if (client.url === '/' && 'focus' in client) {
-          // Enviar mensaje para actualizar footer y sonar
-          client.postMessage({
-            accion: 'alertaBackground',
-            tipo: event.notification.title.replace('Alerta: ', ''),
-            nombre: event.notification.body.split(' - ')[0],
-            telefono: event.notification.body.split(' - ')[1],
-            casa: event.notification.body.split(' - ')[2]
-          });
-          return client.focus();
-        }
-      }
-      // Si no hay ventana abierta, abrir una nueva
-      return clients.openWindow('/').then(newClient => {
-        newClient.postMessage({
-          accion: 'alertaBackground',
-          tipo: event.notification.title.replace('Alerta: ', ''),
-          nombre: event.notification.body.split(' - ')[0],
-          telefono: event.notification.body.split(' - ')[1],
-          casa: event.notification.body.split(' - ')[2]
-        });
-      });
-    })
+    caches.keys().then(keys => Promise.all(
+      keys.map(key => key !== CACHE_NAME ? caches.delete(key) : null)
+    ))
   );
+  self.clients.claim();
+});
+
+messaging.onBackgroundMessage(payload => {
+  const notificationTitle = payload.notification.title;
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: '/icon.png'
+  };
+  self.registration.showNotification(notificationTitle, notificationOptions);
 });
