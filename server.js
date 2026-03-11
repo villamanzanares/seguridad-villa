@@ -1,6 +1,8 @@
 import express from "express";
 import admin from "firebase-admin";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(cors());
@@ -12,7 +14,12 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-// Endpoints
+// Middleware para servir archivos estáticos
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, "public")));
+
+// Endpoints API
 app.post("/guardar-token", async (req, res) => {
   const { token, usuario } = req.body;
   try {
@@ -44,5 +51,11 @@ app.post("/alerta", async (req, res) => {
   }
 });
 
+// Servir index.html en cualquier ruta desconocida
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Puerto
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => console.log(`Server escuchando en puerto ${PORT}`));
