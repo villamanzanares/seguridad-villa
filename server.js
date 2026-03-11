@@ -1,61 +1,63 @@
+// server.js
 import express from "express";
+import bodyParser from "body-parser";
 import admin from "firebase-admin";
-import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from "fs";
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+const PORT = 8080;
 
-// Inicialización Firebase con la variable única
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+app.use(bodyParser.json());
+app.use(express.static("public"));
+
+// Inicializar Firebase Admin con tu service account
+const serviceAccount = JSON.parse(
+  fs.readFileSync("./serviceAccountKey.json", "utf8")
+);
+
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(serviceAccount),
 });
 
-// Middleware para servir archivos estáticos
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-app.use(express.static(path.join(__dirname, "public")));
+const db = admin.firestore();
 
-// Endpoints API
-app.post("/guardar-token", async (req, res) => {
-  const { token, usuario } = req.body;
-  try {
-    await admin.firestore().collection("tokens").doc(usuario).set({ token });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
+// Endpoint para recibir alertas desde el frontend
 app.post("/alerta", async (req, res) => {
   const { tipo, usuario } = req.body;
-  try {
-    const tokensSnap = await admin.firestore().collection("tokens").get();
-    const tokens = tokensSnap.docs.map(doc => doc.data().token);
 
-    const message = {
+  if (!tipo || !usuario) {
+    return res.status(400).json({ success: false, error: "Faltan datos" });
+  }
+
+  try {
+    // Obtener todos los tokens registrados en Firestore
+    const snapshot = await db.collection("tokens").get();
+    const tokens = snapshot.docs.map(doc => doc.data().token);
+
+    if (tokens.length === 0) {
+      return res.status(200).json({ success: true, message: "No hay tokens registrados" });
+    }
+
+    // Payload de la notificación
+    const payload = {
       notification: {
-        title: `Alerta: ${tipo}`,
-        body: `Usuario: ${usuario}`
+        title: tipo,
+        body: `Usuario: ${usuario}`,
       },
-      tokens
     };
 
-    await admin.messaging().sendMulticast(message);
-    res.json({ success: true });
+    // Enviar notificación a todos los tokens
+    const response = await admin.messaging().sendToDevice(tokens, payload);
+    console.log("Notificación enviada:", response);
+
+    res.status(200).json({ success: true, message: "Alerta enviada ✅" });
+
   } catch (err) {
+    console.error("Error enviando alerta:", err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// Servir index.html en cualquier ruta desconocida
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
-
-// Puerto
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Server escuchando en puerto ${PORT}`));
