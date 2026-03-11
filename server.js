@@ -12,6 +12,7 @@ app.use(express.static("public"));
 // Tu Server Key de Firebase (del proyecto FCM)
 // ⚠️ Mantén esta key privada, puedes guardarla en Render como variable FIREBASE_SERVER_KEY
 const FIREBASE_SERVER_KEY = process.env.FIREBASE_SERVER_KEY;
+console.log("Server Key cargada ✅", FIREBASE_SERVER_KEY ? true : false);
 
 app.post("/alerta", async (req, res) => {
   const { tipo, usuario } = req.body;
@@ -67,3 +68,4 @@ app.post("/alerta", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
+
