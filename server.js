@@ -1,19 +1,16 @@
-// server.js
+// server.js (para Render)
 import express from "express";
 import bodyParser from "body-parser";
 import admin from "firebase-admin";
-import fs from "fs";
 
 const app = express();
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-// Inicializar Firebase Admin con tu service account
-const serviceAccount = JSON.parse(
-  fs.readFileSync("./serviceAccountKey.json", "utf8")
-);
+// Inicializar Firebase Admin desde variable de entorno
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
