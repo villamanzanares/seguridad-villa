@@ -13,9 +13,9 @@ const messaging = firebase.messaging();
 
 // Notificación en background
 messaging.onBackgroundMessage(payload => {
-  const { tipo } = payload.data;
-  self.registration.showNotification(`Alerta: ${tipo}`, {
-    body: "Toca para abrir la app y escuchar la sirena",
+  const data = payload.data;
+  self.registration.showNotification(`Alerta: ${data.tipo}`, {
+    body: `${data.nombre} - ${data.telefono} - ${data.casa}`,
     icon: '/icon.png',
     vibrate: [200, 100, 200],
     tag: 'alerta-rosko'
@@ -26,17 +26,29 @@ messaging.onBackgroundMessage(payload => {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type: "window" }).then(windowClients => {
+    clients.matchAll({ type: 'window' }).then(windowClients => {
       for (let client of windowClients) {
-        // Si ya hay ventana abierta
         if (client.url === '/' && 'focus' in client) {
-          client.postMessage({ accion: 'sonarSirena' });
+          // Enviar mensaje para actualizar footer y sonar
+          client.postMessage({
+            accion: 'alertaBackground',
+            tipo: event.notification.title.replace('Alerta: ', ''),
+            nombre: event.notification.body.split(' - ')[0],
+            telefono: event.notification.body.split(' - ')[1],
+            casa: event.notification.body.split(' - ')[2]
+          });
           return client.focus();
         }
       }
       // Si no hay ventana abierta, abrir una nueva
       return clients.openWindow('/').then(newClient => {
-        newClient.postMessage({ accion: 'sonarSirena' });
+        newClient.postMessage({
+          accion: 'alertaBackground',
+          tipo: event.notification.title.replace('Alerta: ', ''),
+          nombre: event.notification.body.split(' - ')[0],
+          telefono: event.notification.body.split(' - ')[1],
+          casa: event.notification.body.split(' - ')[2]
+        });
       });
     })
   );
