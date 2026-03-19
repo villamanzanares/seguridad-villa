@@ -11,16 +11,18 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-/* BACKGROUND */
-messaging.onBackgroundMessage(function(payload) {
+// 📩 BACKGROUND
+messaging.onBackgroundMessage((payload)=>{
 
-  const notificationTitle = payload.notification.title;
+  const data = payload.data;
 
-  const notificationOptions = {
-    body: payload.notification.body,
+  const title = "🚨 " + data.tipo;
+
+  const options = {
+    body: data.nombre + " - Casa " + data.casa,
     icon: "/icon.png"
   };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  self.registration.showNotification(title, options);
 
 });
