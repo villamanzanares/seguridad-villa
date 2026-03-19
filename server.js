@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json());
 app.use(express.static("public"));
 
-/* FIREBASE ADMIN */
+/* FIREBASE */
 const serviceAccount = JSON.parse(
   process.env.FIREBASE_SERVICE_ACCOUNT_JSON
 );
@@ -21,7 +21,7 @@ const db = admin.firestore();
 console.log("Firebase Admin iniciado ✅");
 
 /* =========================
-   SUSCRIPCIÓN
+   SUBSCRIBE
 ========================= */
 
 app.post("/subscribe", async (req, res) => {
@@ -31,7 +31,7 @@ app.post("/subscribe", async (req, res) => {
     await admin.messaging().subscribeToTopic(token, "vecinos");
     res.json({ ok: true });
   } catch (err) {
-    console.error(err);
+    console.error("Error subscribe:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -44,7 +44,8 @@ app.post("/alerta", async (req, res) => {
   const { tipo, usuario, telefono, casa, villa } = req.body;
 
   try {
-    /* GUARDAR EN FIRESTORE */
+
+    /* GUARDAR */
     await db.collection("alertas").add({
       tipo,
       usuario,
@@ -54,18 +55,19 @@ app.post("/alerta", async (req, res) => {
       timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    /* ENVIAR PUSH */
-    const message = {
+    /* PUSH */
+    await admin.messaging().send({
       notification: {
         title: `🚨 ${tipo}`,
         body: `${usuario} - ${villa}`
       },
       topic: "vecinos"
-    };
+    });
 
-    await admin.messaging().send(message);
+    console.log("Alerta enviada:", tipo);
 
     res.json({ ok: true });
+
   } catch (err) {
     console.error("Error alerta:", err);
     res.status(500).json({ error: err.message });
