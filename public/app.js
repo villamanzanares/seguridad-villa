@@ -3,6 +3,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
   projectId: "alerta-rosko",
+  storageBucket: "alerta-rosko.firebasestorage.app",
   messagingSenderId: "1022811358317",
   appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
 };
@@ -12,129 +13,155 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 const db = firebase.firestore();
 
-// 🔐 REGISTRO DE USUARIO
-window.registrarUsuario = async function(){
+let usuario = null;
 
-  console.log("Permiso actual:", Notification.permission);
+// 🧠 VERIFICAR USUARIO
+function verificarUsuario() {
+  const data = localStorage.getItem("usuario");
 
+  if (!data) {
+    document.getElementById("registro").style.display = "block";
+    document.getElementById("app").style.display = "none";
+  } else {
+    usuario = JSON.parse(data);
+    document.getElementById("registro").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    iniciarApp();
+  }
+}
+
+// 💾 GUARDAR USUARIO
+function guardarUsuario() {
   const nombre = document.getElementById("nombre").value;
   const telefono = document.getElementById("telefono").value;
   const casa = document.getElementById("casa").value;
   const villa = document.getElementById("villa").value;
 
-  if(!nombre || !telefono || !casa || !villa){
-    alert("Completa todos los datos");
+  if (!nombre || !telefono || !casa || !villa) {
+    alert("Completa todos los campos");
     return;
   }
 
-  const usuario = { nombre, telefono, casa, villa };
-
+  usuario = { nombre, telefono, casa, villa };
   localStorage.setItem("usuario", JSON.stringify(usuario));
 
-  document.getElementById("footer").innerText = "Registrando dispositivo...";
+  verificarUsuario();
+}
 
-  // 🔔 Permisos notificación
-  const permission = await Notification.requestPermission();
+// 🚀 INICIO
+async function iniciarApp() {
+  await registrarServiceWorker();
+  await solicitarPermisoYToken();
+  escucharAlertas();
+}
 
-  if(permission !== "granted"){
-    document.getElementById("footer").innerText = "Permisos denegados ❌";
-    return;
+// 🔧 SERVICE WORKER
+async function registrarServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    console.log("Service Worker registrado ✅");
   }
+}
 
-  // 📡 Service Worker
-  const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+// 🔔 NOTIFICACIONES
+async function solicitarPermisoYToken() {
+  const permiso = await Notification.requestPermission();
+  console.log("Permiso:", permiso);
 
-// 🔥 CLAVE: esperar a que esté activo
-await navigator.serviceWorker.ready;
+  if (permiso !== "granted") return;
 
-const token = await messaging.getToken({
-  vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-  serviceWorkerRegistration: registration
-});
+  const registration = await navigator.serviceWorker.ready;
 
-  // 📌 Suscribirse al topic
-  await fetch("/subscribe",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json"},
-    body: JSON.stringify({ token })
+  const token = await messaging.getToken({
+    vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+    serviceWorkerRegistration: registration
   });
 
-  document.getElementById("registro").classList.add("hidden");
-  document.getElementById("app").classList.remove("hidden");
+  console.log("TOKEN:", token);
 
-  document.getElementById("footer").innerText = "Sistema listo ✅";
-
-  iniciarHistorial();
+  await fetch("/registro-token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      token,
+      villa: usuario.villa
+    })
+  });
 }
 
 // 🚨 ENVIAR ALERTA
-window.enviarAlerta = async function(tipo){
+function enviarAlerta(tipo) {
+  actualizarFooter(tipo);
 
-  const usuario = JSON.parse(localStorage.getItem("usuario"));
-
-  document.getElementById("footer").innerText =
-    "🚨 " + tipo + " enviada por " + usuario.nombre;
-
-  await fetch("/alerta",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json"},
-    body: JSON.stringify({ tipo, usuario })
+  fetch("/alerta", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      tipo,
+      usuario,
+      villa: usuario.villa
+    })
   });
-
 }
 
-// 📩 MENSAJE EN PRIMER PLANO
-messaging.onMessage((payload)=>{
-
-  const data = payload.data;
-
-  document.getElementById("footer").innerText =
-    "🚨 " + data.tipo + " - " + data.nombre + " (Casa " + data.casa + ")";
-
-});
-
-// 📜 HISTORIAL TIEMPO REAL
-function iniciarHistorial(){
-
-  const usuario = JSON.parse(localStorage.getItem("usuario"));
-
+// 📡 HISTORIAL (SOLO 3 ALERTAS)
+function escucharAlertas() {
   db.collection("alertas")
-    .where("villa","==",usuario.villa)
-    .orderBy("timestamp","desc")
-    .limit(20)
-    .onSnapshot((snapshot)=>{
+    .where("villa", "==", usuario.villa)
+    .orderBy("timestamp", "desc")
+    .limit(3)
+    .onSnapshot(snapshot => {
 
-      const ul = document.getElementById("historial");
-      ul.innerHTML = "";
+      const contenedor = document.getElementById("historial");
+      contenedor.innerHTML = "";
 
-      snapshot.forEach(doc=>{
+      snapshot.forEach(doc => {
+        const data = doc.data();
 
-        const a = doc.data();
+        const div = document.createElement("div");
+        div.className = "alerta-item";
 
-        const li = document.createElement("li");
-        li.innerText =
-          "🚨 " + a.tipo + " - " + a.nombre + " (Casa " + a.casa + ")";
+        const fecha = data.timestamp
+          ? new Date(data.timestamp.seconds * 1000).toLocaleString()
+          : "Ahora";
 
-        ul.appendChild(li);
+        div.innerHTML = `
+          <strong>${data.tipo}</strong><br>
+          ${data.usuario.nombre} - Casa ${data.usuario.casa}<br>
+          <small>${fecha}</small>
+        `;
 
+        contenedor.appendChild(div);
       });
-
     });
-
 }
 
-// 🔄 AUTO LOGIN
-window.onload = ()=>{
+// 🎯 FOOTER GRANDE
+function actualizarFooter(tipo) {
+  const footer = document.getElementById("footer");
 
-  const usuario = localStorage.getItem("usuario");
+  footer.innerHTML = `
+    <div class="footer-alerta">
+      <div class="titulo">🚨 ALERTA ${tipo}</div>
 
-  if(usuario){
-    document.getElementById("registro").classList.add("hidden");
-    document.getElementById("app").classList.remove("hidden");
+      <div class="info">
+        Enviado por: ${usuario.nombre}
+      </div>
 
-    document.getElementById("footer").innerText = "Bienvenido nuevamente 👋";
+      <div class="info">
+        Casa-Depto: ${usuario.casa} | Fono: ${usuario.telefono}
+      </div>
 
-    iniciarHistorial();
-  }
-
+      <div class="villa">
+        ${usuario.villa}
+      </div>
+    </div>
+  `;
 }
+
+// INIT
+verificarUsuario();
