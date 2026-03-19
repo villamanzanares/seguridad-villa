@@ -1,8 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
   getMessaging,
-  getToken,
-  onMessage
+  getToken
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
 import {
@@ -30,9 +29,14 @@ const db = getFirestore(app);
 
 let usuario = null;
 
-/* INICIO */
+/* =========================
+   INIT
+========================= */
+
 window.onload = () => {
-  verificarUsuario();
+  setTimeout(() => {
+    verificarUsuario();
+  }, 300);
 };
 
 /* =========================
@@ -47,8 +51,10 @@ function verificarUsuario() {
     document.getElementById("app").style.display = "none";
   } else {
     usuario = JSON.parse(data);
+
     document.getElementById("registro").style.display = "none";
     document.getElementById("app").style.display = "block";
+
     iniciarApp();
   }
 }
@@ -65,31 +71,31 @@ function registrarUsuario() {
   }
 
   usuario = { nombre, telefono, casa, villa };
+
   localStorage.setItem("usuario", JSON.stringify(usuario));
 
   verificarUsuario();
 }
 
 /* =========================
-   INIT APP
+   INICIAR APP (NO BLOQUEANTE)
 ========================= */
 
-async function iniciarApp() {
-  try {
-    await registrarServiceWorker();
-  } catch (e) {
-    console.error("SW error:", e);
-  }
+function iniciarApp() {
 
-  try {
-    await solicitarPermisoYToken();
-  } catch (e) {
-    console.error("Token error:", e);
-  }
+  registrarServiceWorker().catch(e =>
+    console.error("SW error:", e)
+  );
+
+  solicitarPermisoYToken().catch(e =>
+    console.error("Token error:", e)
+  );
 
   escucharAlertas();
 
   document.getElementById("footer").innerText = "Sistema listo ✅";
+
+  console.log("App iniciada 🚀");
 }
 
 /* =========================
@@ -100,7 +106,10 @@ async function registrarServiceWorker() {
   const registration = await navigator.serviceWorker.register(
     "/firebase-messaging-sw.js"
   );
-  console.log("SW registrado", registration);
+
+  await navigator.serviceWorker.ready;
+
+  console.log("SW listo");
 }
 
 /* =========================
@@ -109,6 +118,7 @@ async function registrarServiceWorker() {
 
 async function solicitarPermisoYToken() {
   const permission = await Notification.requestPermission();
+
   console.log("Permiso:", permission);
 
   if (permission !== "granted") return;
@@ -128,43 +138,54 @@ async function solicitarPermisoYToken() {
 }
 
 /* =========================
-   ALERTAS
+   ENVIAR ALERTA
 ========================= */
 
 async function enviarAlerta(tipo) {
+
   actualizarFooter(tipo);
 
-  await fetch("/alerta", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      tipo,
-      usuario: usuario.nombre,
-      telefono: usuario.telefono,
-      casa: usuario.casa,
-      villa: usuario.villa
-    })
-  });
+  try {
+    await fetch("/alerta", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        tipo,
+        usuario: usuario.nombre,
+        telefono: usuario.telefono,
+        casa: usuario.casa,
+        villa: usuario.villa
+      })
+    });
+  } catch (e) {
+    console.error("Error alerta:", e);
+  }
 }
+
+/* =========================
+   FOOTER PRO
+========================= */
 
 function actualizarFooter(tipo) {
   const footer = document.getElementById("footer");
 
   footer.innerHTML = `
     <div style="text-align:center;">
-      <div style="font-size:20px; font-weight:bold;">
+      <div style="font-size:22px; font-weight:bold;">
         ALERTA ${tipo}
       </div>
 
-      <div style="margin-top:8px;">
+      <div style="margin-top:10px;">
         Enviado por: ${usuario.nombre}
       </div>
 
       <div>
-        Casa-Depto: ${usuario.casa} | Fono: ${usuario.telefono}
+        Casa: ${usuario.casa} | Fono: ${usuario.telefono}
       </div>
 
-      <div style="margin-top:5px; font-weight:bold;">
+      <div style="margin-top:6px; font-weight:bold;">
         ${usuario.villa}
       </div>
     </div>
@@ -172,10 +193,11 @@ function actualizarFooter(tipo) {
 }
 
 /* =========================
-   HISTORIAL (MAX 3)
+   HISTORIAL (SOLO 3)
 ========================= */
 
 function escucharAlertas() {
+
   console.log("Escuchando alertas...");
 
   const q = query(
@@ -185,6 +207,7 @@ function escucharAlertas() {
   );
 
   onSnapshot(q, (snapshot) => {
+
     const contenedor = document.getElementById("historial");
     contenedor.innerHTML = "";
 
@@ -206,7 +229,7 @@ function escucharAlertas() {
 }
 
 /* =========================
-   EXPONER FUNCIONES (CLAVE)
+   EXPONER FUNCIONES
 ========================= */
 
 window.registrarUsuario = registrarUsuario;
