@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="styles.css">
 <link rel="icon" href="icon.png">
 
-<!-- Firebase -->
+<!-- Firebase (solo para compatibilidad futura, no rompe nada) -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -47,39 +47,34 @@
 
   <div class="botonera">
 
-    <button class="btn emergencia" onclick="enviarAlerta('EMERGENCIA')">
+    <button class="btn emergencia" onclick="enviarAlerta('🚨 EMERGENCIA')">
       🚨 EMERGENCIA
     </button>
 
     <div class="fila">
-      <button class="btn ambulancia" onclick="enviarAlerta('AMBULANCIA')">
+      <button class="btn ambulancia" onclick="enviarAlerta('🚑 AMBULANCIA')">
         🚑 AMBULANCIA
       </button>
 
-      <button class="btn bomberos" onclick="enviarAlerta('BOMBEROS')">
+      <button class="btn bomberos" onclick="enviarAlerta('🚒 BOMBEROS')">
         🚒 BOMBEROS
       </button>
     </div>
 
-    <button class="btn carabineros" onclick="enviarAlerta('CARABINEROS')">
+    <button class="btn carabineros" onclick="enviarAlerta('👮 CARABINEROS')">
       👮 CARABINEROS
     </button>
 
   </div>
 
-  <!-- HISTORIAL -->
-  <div class="historial-box">
-    <h3>📜 Alertas recientes</h3>
-    <ul id="historial"></ul>
-  </div>
-
 </div>
 
 <!-- FOOTER -->
-<div id="footer">
-  Inicializando sistema...
+<div id="footer-alerta">
+  Esperando alertas...
 </div>
 
+<!-- APP SCRIPT -->
 <script type="module" src="app.js"></script>
   
 </body>
