@@ -21,6 +21,13 @@
 
 <div class="botonera">
 
+<select id="ubicacion" class="ubicacion">
+  <option value="Casa">📍 Casa</option>
+  <option value="Portón">🚪 Portón</option>
+  <option value="Plaza">🌳 Plaza</option>
+  <option value="Calle">🛣 Calle</option>
+</select>
+
 <button class="btn emergencia" onclick="enviarAlerta('EMERGENCIA')">
 🚨 EMERGENCIA
 </button>
@@ -44,7 +51,8 @@
 </div>
 
 <div id="footer">
-Inicializando sistema...
+<div id="alertaTipo">Sistema iniciando...</div>
+<div id="alertaUsuario"></div>
 </div>
 
 <script type="module">
@@ -65,29 +73,33 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-/* FOOTER INTELIGENTE */
-function setFooter(msg){
-  document.getElementById("footer").innerText = msg;
-}
-
-/* USUARIO LOCAL */
+/* USUARIO */
 let usuario = localStorage.getItem("usuario");
 
 if(!usuario){
-  usuario = "Vecino-" + Math.floor(Math.random()*1000);
-  localStorage.setItem("usuario", usuario);
+  usuario = prompt("Ingresa tu nombre o casa:");
+  localStorage.setItem("usuario", usuario || "Vecino");
 }
 
-/* SERVICE WORKER + TOKEN */
+/* FOOTER VISUAL */
+function mostrarAlerta(tipo, usuarioTxt){
+
+  document.getElementById("alertaTipo").innerText = "🚨 " + tipo;
+  document.getElementById("alertaUsuario").innerText = usuarioTxt;
+
+}
+
+/* BLOQUEO SPAM */
+let bloqueado = false;
+
+/* SW + TOKEN */
 navigator.serviceWorker.register("/firebase-messaging-sw.js")
 .then(async (registration) => {
-
-  setFooter("Solicitando permisos...");
 
   const permission = await Notification.requestPermission();
 
   if(permission !== "granted"){
-    setFooter("Permisos denegados ❌");
+    mostrarAlerta("PERMISOS DENEGADOS", "");
     return;
   }
 
@@ -96,34 +108,37 @@ navigator.serviceWorker.register("/firebase-messaging-sw.js")
     serviceWorkerRegistration: registration
   });
 
-  console.log("TOKEN:", token);
-
   await fetch("/subscribe",{
     method:"POST",
     headers:{ "Content-Type":"application/json"},
     body:JSON.stringify({ token })
   });
 
-  setFooter("Sistema listo ✅");
+  mostrarAlerta("SISTEMA LISTO ✅", usuario);
 
 });
 
-/* MENSAJES EN FOREGROUND */
+/* RECIBIR ALERTAS */
 onMessage(messaging, (payload) => {
-
-  console.log("Mensaje recibido:", payload);
 
   const titulo = payload.notification?.title || "ALERTA";
   const cuerpo = payload.notification?.body || "";
 
-  setFooter("🚨 " + titulo + " - " + cuerpo);
+  mostrarAlerta(titulo, cuerpo);
 
 });
 
 /* ENVIAR ALERTA */
 window.enviarAlerta = async function(tipo){
 
-  setFooter("Enviando " + tipo + "...");
+  if(bloqueado) return;
+
+  bloqueado = true;
+  setTimeout(()=> bloqueado = false, 10000);
+
+  const ubicacion = document.getElementById("ubicacion").value;
+
+  mostrarAlerta("ENVIANDO...", usuario + " - " + ubicacion);
 
   if(navigator.vibrate){
     navigator.vibrate([200,100,200]);
@@ -131,19 +146,17 @@ window.enviarAlerta = async function(tipo){
 
   try{
 
-    const res = await fetch("/alerta",{
+    await fetch("/alerta",{
       method:"POST",
       headers:{ "Content-Type":"application/json"},
-      body:JSON.stringify({ tipo, usuario })
+      body:JSON.stringify({ tipo, usuario, ubicacion })
     });
 
-    await res.json();
-
-    setFooter(tipo + " enviada ✅");
+    mostrarAlerta(tipo + " ENVIADA", usuario + " - " + ubicacion);
 
   }catch(e){
 
-    setFooter("Error enviando alerta ❌");
+    mostrarAlerta("ERROR ❌", "");
 
   }
 
