@@ -44,10 +44,13 @@ window.registrarUsuario = async function(){
   // 📡 Service Worker
   const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
 
-  const token = await messaging.getToken({
-    vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-    serviceWorkerRegistration: registration
-  });
+// 🔥 CLAVE: esperar a que esté activo
+await navigator.serviceWorker.ready;
+
+const token = await messaging.getToken({
+  vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+  serviceWorkerRegistration: registration
+});
 
   // 📌 Suscribirse al topic
   await fetch("/subscribe",{
