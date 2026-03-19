@@ -1,7 +1,9 @@
 body {
-  font-family: Arial, sans-serif;
   margin: 0;
-  background: #f5f5f5;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: white;
+  text-align: center;
 }
 
 /* REGISTRO */
@@ -9,63 +11,55 @@ body {
   padding: 20px;
 }
 
-#registro input {
+input {
   display: block;
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 10px;
-}
-
-/* APP */
-#app {
-  padding: 20px;
-}
-
-/* BOTONES */
-button {
-  width: 100%;
-  padding: 15px;
-  margin-bottom: 10px;
+  width: 90%;
+  margin: 10px auto;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
   font-size: 16px;
 }
 
-/* HISTORIAL */
-#historial {
-  margin-top: 20px;
+/* BOTONES */
+.botones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  padding: 20px;
 }
 
-.alerta-item {
-  background: white;
-  padding: 10px;
-  margin-bottom: 10px;
-  border-left: 5px solid red;
+button {
+  padding: 25px;
+  font-size: 18px;
+  border-radius: 15px;
+  border: none;
+  font-weight: bold;
+  color: white;
 }
 
-/* FOOTER PRO */
-#footer {
+.emergencia { background: #dc2626; }
+.robo { background: #ea580c; }
+.incendio { background: #f97316; }
+.asistencia { background: #2563eb; }
+
+/* FOOTER */
+#footer-alerta {
   position: fixed;
   bottom: 0;
   width: 100%;
-  background: linear-gradient(90deg, #8b0000, #ff0000);
-  color: white;
-  padding: 15px;
+  background: #111827;
+  padding: 20px;
+  border-top: 3px solid #22c55e;
 }
 
-/* CONTENIDO FOOTER */
-.footer-alerta {
-  text-align: center;
-}
-
-.footer-alerta .titulo {
-  font-size: 20px;
+.alerta-tipo {
+  font-size: 22px;
   font-weight: bold;
+  margin-bottom: 10px;
 }
 
-.footer-alerta .info {
-  margin-top: 5px;
-}
-
-.footer-alerta .villa {
-  margin-top: 8px;
-  font-weight: bold;
+.alerta-info {
+  font-size: 16px;
+  line-height: 1.5;
 }
