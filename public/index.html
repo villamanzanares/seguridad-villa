@@ -47,13 +47,12 @@
 Inicializando sistema...
 </div>
 
-<!-- Firebase -->
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
-// 🔥 TU CONFIG (usa la misma que ya tenías)
+/* CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
@@ -66,16 +65,29 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-// Registrar Service Worker
+/* FOOTER INTELIGENTE */
+function setFooter(msg){
+  document.getElementById("footer").innerText = msg;
+}
+
+/* USUARIO LOCAL */
+let usuario = localStorage.getItem("usuario");
+
+if(!usuario){
+  usuario = "Vecino-" + Math.floor(Math.random()*1000);
+  localStorage.setItem("usuario", usuario);
+}
+
+/* SERVICE WORKER + TOKEN */
 navigator.serviceWorker.register("/firebase-messaging-sw.js")
 .then(async (registration) => {
 
-  document.getElementById("footer").innerText = "Solicitando permisos...";
+  setFooter("Solicitando permisos...");
 
   const permission = await Notification.requestPermission();
 
   if(permission !== "granted"){
-    document.getElementById("footer").innerText = "Permisos denegados ❌";
+    setFooter("Permisos denegados ❌");
     return;
   }
 
@@ -86,58 +98,54 @@ navigator.serviceWorker.register("/firebase-messaging-sw.js")
 
   console.log("TOKEN:", token);
 
-  // Guardar token en servidor
-  await fetch("/registro",{
+  await fetch("/subscribe",{
     method:"POST",
     headers:{ "Content-Type":"application/json"},
     body:JSON.stringify({ token })
   });
 
-  document.getElementById("footer").innerText = "Sistema listo ✅";
+  setFooter("Sistema listo ✅");
 
 });
 
-// Recibir mensajes en primer plano
+/* MENSAJES EN FOREGROUND */
 onMessage(messaging, (payload) => {
 
   console.log("Mensaje recibido:", payload);
 
-  const tipo = payload.data?.tipo || "ALERTA";
+  const titulo = payload.notification?.title || "ALERTA";
+  const cuerpo = payload.notification?.body || "";
 
-  document.getElementById("footer").innerText =
-    "🚨 " + tipo + " recibida";
+  setFooter("🚨 " + titulo + " - " + cuerpo);
 
 });
 
-</script>
+/* ENVIAR ALERTA */
+window.enviarAlerta = async function(tipo){
 
-<!-- FUNCION ALERTA -->
-<script>
+  setFooter("Enviando " + tipo + "...");
 
-async function enviarAlerta(tipo){
+  if(navigator.vibrate){
+    navigator.vibrate([200,100,200]);
+  }
 
-document.getElementById("footer").innerText =
-"Enviando alerta " + tipo + "...";
+  try{
 
-try{
+    const res = await fetch("/alerta",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json"},
+      body:JSON.stringify({ tipo, usuario })
+    });
 
-const res = await fetch("/alerta",{
-method:"POST",
-headers:{ "Content-Type":"application/json"},
-body:JSON.stringify({ tipo })
-});
+    await res.json();
 
-const data = await res.json();
+    setFooter(tipo + " enviada ✅");
 
-document.getElementById("footer").innerText =
-"Alerta " + tipo + " enviada ✅";
+  }catch(e){
 
-}catch(e){
+    setFooter("Error enviando alerta ❌");
 
-document.getElementById("footer").innerText =
-"Error enviando alerta ❌";
-
-}
+  }
 
 }
 
