@@ -1,14 +1,14 @@
-import express from "express";
-import admin from "firebase-admin";
+const express = require("express");
+const admin = require("firebase-admin");
+const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 10000;
 
 app.use(express.json());
 app.use(express.static("public"));
 
-// 🔥 Firebase Admin
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+// 🔥 FIREBASE ADMIN
+const serviceAccount = require("./serviceAccountKey.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -18,71 +18,61 @@ const db = admin.firestore();
 
 console.log("Firebase Admin iniciado ✅");
 
-// 📌 SUSCRIPCIÓN A TOPIC
-app.post("/subscribe", async (req,res)=>{
+// 🧠 TOKENS
+let tokens = [];
 
-  const { token } = req.body;
+// 📌 REGISTRO TOKEN
+app.post("/registro-token", (req, res) => {
+  const { token, villa } = req.body;
 
-  try{
+  tokens.push({ token, villa });
 
-    await admin.messaging().subscribeToTopic(token,"vecinos");
+  console.log("Token registrado:", villa);
 
-    res.json({ ok:true });
-
-  }catch(err){
-
-    console.error(err);
-    res.status(500).json({ error: err.message });
-
-  }
-
+  res.sendStatus(200);
 });
 
-// 🚨 ENVIAR ALERTA
-app.post("/alerta", async (req,res)=>{
+// 🚨 ALERTA
+app.post("/alerta", async (req, res) => {
+  const { tipo, usuario, villa } = req.body;
 
-  const { tipo, usuario } = req.body;
-
-  try{
-
-    // 💾 Guardar en Firestore
+  try {
+    // Guardar en Firestore
     await db.collection("alertas").add({
       tipo,
-      nombre: usuario.nombre,
-      casa: usuario.casa,
-      telefono: usuario.telefono,
-      villa: usuario.villa,
-      timestamp: Date.now()
+      usuario,
+      villa,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    // 📡 Notificación
-    const message = {
-      notification:{
-        title: "🚨 " + tipo,
-        body: usuario.nombre + " - Casa " + usuario.casa
-      },
-      data:{
-        tipo,
-        nombre: usuario.nombre,
-        casa: usuario.casa,
-        villa: usuario.villa
-      },
-      topic:"vecinos"
-    };
+    // Filtrar tokens por villa
+    const tokensFiltrados = tokens
+      .filter(t => t.villa === villa)
+      .map(t => t.token);
 
-    await admin.messaging().send(message);
+    if (tokensFiltrados.length > 0) {
+      await admin.messaging().sendMulticast({
+        tokens: tokensFiltrados,
+        notification: {
+          title: `🚨 ALERTA ${tipo}`,
+          body: `${usuario.nombre} - Casa ${usuario.casa}`
+        }
+      });
+    }
 
-    res.json({ success:true });
+    console.log("Alerta enviada:", tipo);
 
-  }catch(err){
+    res.sendStatus(200);
 
-    console.error(err);
-    res.status(500).json({ error: err.message });
-
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(500);
   }
-
 });
 
-app.listen(PORT,()=>{
-  console.log("Servidor corriendo en puerto",PORT);
+// 🚀 START
+const PORT = process.env.PORT || 10000;
+
+app.listen(PORT, () => {
+  console.log("Servidor corriendo en puerto", PORT);
 });
