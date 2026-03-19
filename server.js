@@ -13,7 +13,8 @@ admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-console.log("Firebase Admin iniciado ✅");
+/* MEMORIA SIMPLE */
+let historial = [];
 
 /* SUBSCRIBE */
 app.post("/subscribe", async (req,res)=>{
@@ -36,6 +37,19 @@ app.post("/alerta", async (req,res)=>{
 
   try{
 
+    const evento = {
+      tipo,
+      usuario,
+      ubicacion,
+      timestamp: Date.now()
+    };
+
+    historial.unshift(evento);
+
+    if(historial.length > 20){
+      historial.pop();
+    }
+
     const message = {
       notification:{
         title: tipo,
@@ -44,16 +58,19 @@ app.post("/alerta", async (req,res)=>{
       topic:"vecinos"
     };
 
-    const response = await admin.messaging().send(message);
+    await admin.messaging().send(message);
 
     res.json({ success:true });
 
   }catch(err){
-
     res.status(500).json({ error:err.message });
-
   }
 
+});
+
+/* HISTORIAL */
+app.get("/historial",(req,res)=>{
+  res.json(historial);
 });
 
 app.listen(PORT,()=>{
