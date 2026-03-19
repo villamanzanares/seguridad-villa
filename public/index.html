@@ -50,9 +50,13 @@
 
 </div>
 
+<!-- HISTORIAL -->
+<div id="historial"></div>
+
+<!-- FOOTER IMPACTO -->
 <div id="footer">
-<div id="alertaTipo">Sistema iniciando...</div>
-<div id="alertaUsuario"></div>
+  <div id="alertaTipo">Sistema iniciando...</div>
+  <div id="alertaUsuario"></div>
 </div>
 
 <script type="module">
@@ -81,18 +85,35 @@ if(!usuario){
   localStorage.setItem("usuario", usuario || "Vecino");
 }
 
-/* FOOTER VISUAL */
+/* FOOTER */
 function mostrarAlerta(tipo, usuarioTxt){
-
   document.getElementById("alertaTipo").innerText = "🚨 " + tipo;
   document.getElementById("alertaUsuario").innerText = usuarioTxt;
-
 }
 
-/* BLOQUEO SPAM */
+/* HISTORIAL UI */
+function renderHistorial(lista){
+  const cont = document.getElementById("historial");
+  cont.innerHTML = "";
+
+  lista.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "itemHistorial";
+
+    div.innerHTML = `
+      <div class="tipo">${item.tipo}</div>
+      <div class="detalle">${item.usuario} - ${item.ubicacion}</div>
+      <div class="hora">${new Date(item.timestamp).toLocaleTimeString()}</div>
+    `;
+
+    cont.appendChild(div);
+  });
+}
+
+/* BLOQUEO */
 let bloqueado = false;
 
-/* SW + TOKEN */
+/* INIT */
 navigator.serviceWorker.register("/firebase-messaging-sw.js")
 .then(async (registration) => {
 
@@ -114,21 +135,36 @@ navigator.serviceWorker.register("/firebase-messaging-sw.js")
     body:JSON.stringify({ token })
   });
 
+  cargarHistorial();
+
   mostrarAlerta("SISTEMA LISTO ✅", usuario);
 
 });
 
-/* RECIBIR ALERTAS */
-onMessage(messaging, (payload) => {
+/* RECIBIR */
+onMessage(messaging, async (payload) => {
 
-  const titulo = payload.notification?.title || "ALERTA";
+  const tipo = payload.notification?.title || "ALERTA";
   const cuerpo = payload.notification?.body || "";
 
-  mostrarAlerta(titulo, cuerpo);
+  mostrarAlerta(tipo, cuerpo);
+
+  cargarHistorial();
 
 });
 
-/* ENVIAR ALERTA */
+/* CARGAR HISTORIAL */
+async function cargarHistorial(){
+  try{
+    const res = await fetch("/historial");
+    const data = await res.json();
+    renderHistorial(data);
+  }catch(e){
+    console.error("Error historial", e);
+  }
+}
+
+/* ENVIAR */
 window.enviarAlerta = async function(tipo){
 
   if(bloqueado) return;
@@ -140,10 +176,6 @@ window.enviarAlerta = async function(tipo){
 
   mostrarAlerta("ENVIANDO...", usuario + " - " + ubicacion);
 
-  if(navigator.vibrate){
-    navigator.vibrate([200,100,200]);
-  }
-
   try{
 
     await fetch("/alerta",{
@@ -153,6 +185,8 @@ window.enviarAlerta = async function(tipo){
     });
 
     mostrarAlerta(tipo + " ENVIADA", usuario + " - " + ubicacion);
+
+    cargarHistorial();
 
   }catch(e){
 
