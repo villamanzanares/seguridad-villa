@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json());
 app.use(express.static("public"));
 
-/* iniciar firebase admin */
+/* FIREBASE ADMIN */
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
 admin.initializeApp({
@@ -16,7 +16,7 @@ admin.initializeApp({
 
 console.log("Firebase Admin iniciado ✅");
 
-/* registrar dispositivo en el topic */
+/* SUSCRIBIR TOKEN */
 app.post("/subscribe", async (req,res)=>{
 
   const { token } = req.body;
@@ -25,7 +25,7 @@ app.post("/subscribe", async (req,res)=>{
 
     await admin.messaging().subscribeToTopic(token,"vecinos");
 
-    console.log("Token suscrito al topic vecinos");
+    console.log("Token suscrito a vecinos");
 
     res.json({ ok:true });
 
@@ -39,7 +39,7 @@ app.post("/subscribe", async (req,res)=>{
 
 });
 
-/* enviar alerta */
+/* ENVIAR ALERTA */
 app.post("/alerta", async (req,res)=>{
 
   const { tipo, usuario } = req.body;
@@ -49,7 +49,7 @@ app.post("/alerta", async (req,res)=>{
     const message = {
       notification:{
         title: tipo,
-        body:`Usuario: ${usuario}`
+        body: `Usuario: ${usuario}`
       },
       topic:"vecinos"
     };
