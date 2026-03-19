@@ -1,121 +1,71 @@
-body{
-  margin:0;
-  font-family:Arial, Helvetica, sans-serif;
-  background:linear-gradient(180deg,#0f0f0f,#1a1a1a);
-  color:white;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #f5f5f5;
 }
 
-/* HEADER */
-.header{
-  text-align:center;
-  margin-top:20px;
+/* REGISTRO */
+#registro {
+  padding: 20px;
 }
 
-.logo{
-  width:80px;
+#registro input {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px;
 }
 
-.sub{
-  font-size:13px;
-  color:#aaa;
-}
-
-/* CARD */
-.card{
-  margin-top:20px;
-  width:90%;
-  max-width:400px;
-  background:#1f1f1f;
-  padding:20px;
-  border-radius:14px;
-  box-shadow:0 0 20px rgba(0,0,0,0.4);
-}
-
-.card input{
-  width:100%;
-  margin:8px 0;
-  padding:12px;
-  border:none;
-  border-radius:8px;
-  font-size:14px;
+/* APP */
+#app {
+  padding: 20px;
 }
 
 /* BOTONES */
-.botonera{
-  margin-top:20px;
-  width:90%;
-  max-width:420px;
-  display:flex;
-  flex-direction:column;
-  gap:18px;
+button {
+  width: 100%;
+  padding: 15px;
+  margin-bottom: 10px;
+  font-size: 16px;
 }
-
-.fila{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:18px;
-}
-
-.btn{
-  height:100px;
-  border:none;
-  border-radius:14px;
-  font-size:18px;
-  font-weight:bold;
-  color:white;
-  cursor:pointer;
-  transition:0.2s;
-}
-
-.btn:active{
-  transform:scale(0.97);
-}
-
-.emergencia{ background:#ff2b2b; }
-.ambulancia{ background:#2b7cff; }
-.bomberos{ background:#ff7b00; }
-.carabineros{ background:#2bbf4b; }
-.guardar{ background:#444; height:50px; }
 
 /* HISTORIAL */
-.historial-box{
-  margin-top:25px;
-  width:90%;
-  max-width:420px;
-  background:#1a1a1a;
-  padding:15px;
-  border-radius:12px;
+#historial {
+  margin-top: 20px;
 }
 
-#historial{
-  list-style:none;
-  padding:0;
-  margin:0;
+.alerta-item {
+  background: white;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-left: 5px solid red;
 }
 
-#historial li{
-  padding:10px;
-  border-bottom:1px solid #333;
-  font-size:14px;
+/* FOOTER PRO */
+#footer {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: linear-gradient(90deg, #8b0000, #ff0000);
+  color: white;
+  padding: 15px;
 }
 
-/* FOOTER (IMPORTANTE) */
-#footer{
-  position:fixed;
-  bottom:0;
-  width:100%;
-  background:#111;
-  text-align:center;
-  padding:16px;
-  font-size:18px;
-  font-weight:bold;
-  border-top:2px solid #222;
+/* CONTENIDO FOOTER */
+.footer-alerta {
+  text-align: center;
 }
 
-/* UTIL */
-.hidden{
-  display:none;
+.footer-alerta .titulo {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.footer-alerta .info {
+  margin-top: 5px;
+}
+
+.footer-alerta .villa {
+  margin-top: 8px;
+  font-weight: bold;
 }
