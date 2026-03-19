@@ -15,6 +15,8 @@ const db = firebase.firestore();
 // 🔐 REGISTRO DE USUARIO
 window.registrarUsuario = async function(){
 
+  console.log("Permiso actual:", Notification.permission);
+
   const nombre = document.getElementById("nombre").value;
   const telefono = document.getElementById("telefono").value;
   const casa = document.getElementById("casa").value;
