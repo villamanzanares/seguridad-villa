@@ -1,14 +1,16 @@
-const express = require("express");
-const admin = require("firebase-admin");
-const path = require("path");
+import express from "express";
+import admin from "firebase-admin";
 
 const app = express();
+const PORT = process.env.PORT || 10000;
 
 app.use(express.json());
 app.use(express.static("public"));
 
-// 🔥 FIREBASE ADMIN
-const serviceAccount = require("./serviceAccountKey.json");
+/* FIREBASE ADMIN */
+const serviceAccount = JSON.parse(
+  process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -18,60 +20,57 @@ const db = admin.firestore();
 
 console.log("Firebase Admin iniciado ✅");
 
-// 🧠 TOKENS
-let tokens = [];
+/* =========================
+   SUSCRIPCIÓN
+========================= */
 
-// 📌 REGISTRO TOKEN
-app.post("/registro-token", (req, res) => {
-  const { token, villa } = req.body;
-
-  tokens.push({ token, villa });
-
-  console.log("Token registrado:", villa);
-
-  res.sendStatus(200);
-});
-
-// 🚨 ALERTA
-app.post("/alerta", async (req, res) => {
-  const { tipo, usuario, villa } = req.body;
+app.post("/subscribe", async (req, res) => {
+  const { token } = req.body;
 
   try {
-    // Guardar en Firestore
+    await admin.messaging().subscribeToTopic(token, "vecinos");
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* =========================
+   ALERTA
+========================= */
+
+app.post("/alerta", async (req, res) => {
+  const { tipo, usuario, telefono, casa, villa } = req.body;
+
+  try {
+    /* GUARDAR EN FIRESTORE */
     await db.collection("alertas").add({
       tipo,
       usuario,
+      telefono,
+      casa,
       villa,
       timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    // Filtrar tokens por villa
-    const tokensFiltrados = tokens
-      .filter(t => t.villa === villa)
-      .map(t => t.token);
+    /* ENVIAR PUSH */
+    const message = {
+      notification: {
+        title: `🚨 ${tipo}`,
+        body: `${usuario} - ${villa}`
+      },
+      topic: "vecinos"
+    };
 
-    if (tokensFiltrados.length > 0) {
-      await admin.messaging().sendMulticast({
-        tokens: tokensFiltrados,
-        notification: {
-          title: `🚨 ALERTA ${tipo}`,
-          body: `${usuario.nombre} - Casa ${usuario.casa}`
-        }
-      });
-    }
+    await admin.messaging().send(message);
 
-    console.log("Alerta enviada:", tipo);
-
-    res.sendStatus(200);
-
-  } catch (error) {
-    console.error(error);
-    res.sendStatus(500);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Error alerta:", err);
+    res.status(500).json({ error: err.message });
   }
 });
-
-// 🚀 START
-const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
   console.log("Servidor corriendo en puerto", PORT);
