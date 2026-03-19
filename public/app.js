@@ -1,4 +1,20 @@
-// 🔥 CONFIG FIREBASE
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import {
+  getMessaging,
+  getToken,
+  onMessage
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+
+import {
+  getFirestore,
+  collection,
+  query,
+  orderBy,
+  limit,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+/* CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
@@ -8,14 +24,21 @@ const firebaseConfig = {
   appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
 };
 
-firebase.initializeApp(firebaseConfig);
-
-const messaging = firebase.messaging();
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+const db = getFirestore(app);
 
 let usuario = null;
 
-// 🧠 VERIFICAR USUARIO
+/* INICIO */
+window.onload = () => {
+  verificarUsuario();
+};
+
+/* =========================
+   USUARIO
+========================= */
+
 function verificarUsuario() {
   const data = localStorage.getItem("usuario");
 
@@ -30,8 +53,7 @@ function verificarUsuario() {
   }
 }
 
-// 💾 GUARDAR USUARIO
-function guardarUsuario() {
+function registrarUsuario() {
   const nombre = document.getElementById("nombre").value;
   const telefono = document.getElementById("telefono").value;
   const casa = document.getElementById("casa").value;
@@ -48,120 +70,144 @@ function guardarUsuario() {
   verificarUsuario();
 }
 
-// 🚀 INICIO
+/* =========================
+   INIT APP
+========================= */
+
 async function iniciarApp() {
-  await registrarServiceWorker();
-  await solicitarPermisoYToken();
-  escucharAlertas();
-}
-
-// 🔧 SERVICE WORKER
-async function registrarServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    console.log("Service Worker registrado ✅");
+  try {
+    await registrarServiceWorker();
+  } catch (e) {
+    console.error("SW error:", e);
   }
+
+  try {
+    await solicitarPermisoYToken();
+  } catch (e) {
+    console.error("Token error:", e);
+  }
+
+  escucharAlertas();
+
+  document.getElementById("footer").innerText = "Sistema listo ✅";
 }
 
-// 🔔 NOTIFICACIONES
+/* =========================
+   SERVICE WORKER
+========================= */
+
+async function registrarServiceWorker() {
+  const registration = await navigator.serviceWorker.register(
+    "/firebase-messaging-sw.js"
+  );
+  console.log("SW registrado", registration);
+}
+
+/* =========================
+   NOTIFICACIONES
+========================= */
+
 async function solicitarPermisoYToken() {
-  const permiso = await Notification.requestPermission();
-  console.log("Permiso:", permiso);
+  const permission = await Notification.requestPermission();
+  console.log("Permiso:", permission);
 
-  if (permiso !== "granted") return;
+  if (permission !== "granted") return;
 
-  const registration = await navigator.serviceWorker.ready;
-
-  const token = await messaging.getToken({
-    vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-    serviceWorkerRegistration: registration
+  const token = await getToken(messaging, {
+    vapidKey:
+      "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
   });
 
   console.log("TOKEN:", token);
 
-  await fetch("/registro-token", {
+  await fetch("/subscribe", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      token,
-      villa: usuario.villa
-    })
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token })
   });
 }
 
-// 🚨 ENVIAR ALERTA
-function enviarAlerta(tipo) {
+/* =========================
+   ALERTAS
+========================= */
+
+async function enviarAlerta(tipo) {
   actualizarFooter(tipo);
 
-  fetch("/alerta", {
+  await fetch("/alerta", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       tipo,
-      usuario,
+      usuario: usuario.nombre,
+      telefono: usuario.telefono,
+      casa: usuario.casa,
       villa: usuario.villa
     })
   });
 }
 
-// 📡 HISTORIAL (SOLO 3 ALERTAS)
-function escucharAlertas() {
-  db.collection("alertas")
-    .where("villa", "==", usuario.villa)
-    .orderBy("timestamp", "desc")
-    .limit(3)
-    .onSnapshot(snapshot => {
-
-      const contenedor = document.getElementById("historial");
-      contenedor.innerHTML = "";
-
-      snapshot.forEach(doc => {
-        const data = doc.data();
-
-        const div = document.createElement("div");
-        div.className = "alerta-item";
-
-        const fecha = data.timestamp
-          ? new Date(data.timestamp.seconds * 1000).toLocaleString()
-          : "Ahora";
-
-        div.innerHTML = `
-          <strong>${data.tipo}</strong><br>
-          ${data.usuario.nombre} - Casa ${data.usuario.casa}<br>
-          <small>${fecha}</small>
-        `;
-
-        contenedor.appendChild(div);
-      });
-    });
-}
-
-// 🎯 FOOTER GRANDE
 function actualizarFooter(tipo) {
   const footer = document.getElementById("footer");
 
   footer.innerHTML = `
-    <div class="footer-alerta">
-      <div class="titulo">🚨 ALERTA ${tipo}</div>
+    <div style="text-align:center;">
+      <div style="font-size:20px; font-weight:bold;">
+        ALERTA ${tipo}
+      </div>
 
-      <div class="info">
+      <div style="margin-top:8px;">
         Enviado por: ${usuario.nombre}
       </div>
 
-      <div class="info">
+      <div>
         Casa-Depto: ${usuario.casa} | Fono: ${usuario.telefono}
       </div>
 
-      <div class="villa">
+      <div style="margin-top:5px; font-weight:bold;">
         ${usuario.villa}
       </div>
     </div>
   `;
 }
 
-// INIT
-verificarUsuario();
+/* =========================
+   HISTORIAL (MAX 3)
+========================= */
+
+function escucharAlertas() {
+  console.log("Escuchando alertas...");
+
+  const q = query(
+    collection(db, "alertas"),
+    orderBy("timestamp", "desc"),
+    limit(3)
+  );
+
+  onSnapshot(q, (snapshot) => {
+    const contenedor = document.getElementById("historial");
+    contenedor.innerHTML = "";
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+
+      const div = document.createElement("div");
+      div.className = "alerta";
+
+      div.innerHTML = `
+        <strong>${data.tipo}</strong><br>
+        ${data.usuario}<br>
+        ${data.villa}
+      `;
+
+      contenedor.appendChild(div);
+    });
+  });
+}
+
+/* =========================
+   EXPONER FUNCIONES (CLAVE)
+========================= */
+
+window.registrarUsuario = registrarUsuario;
+window.enviarAlerta = enviarAlerta;
