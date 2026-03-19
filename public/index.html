@@ -8,7 +8,6 @@
 <title>Villa Segura</title>
 
 <link rel="stylesheet" href="styles.css">
-
 <link rel="icon" href="favicon.ico">
 
 </head>
@@ -45,9 +44,74 @@
 </div>
 
 <div id="footer">
-Sistema listo
+Inicializando sistema...
 </div>
 
+<!-- Firebase -->
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+
+// 🔥 TU CONFIG (usa la misma que ya tenías)
+const firebaseConfig = {
+  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+  authDomain: "alerta-rosko.firebaseapp.com",
+  projectId: "alerta-rosko",
+  storageBucket: "alerta-rosko.firebasestorage.app",
+  messagingSenderId: "1022811358317",
+  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+};
+
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+
+// Registrar Service Worker
+navigator.serviceWorker.register("/firebase-messaging-sw.js")
+.then(async (registration) => {
+
+  document.getElementById("footer").innerText = "Solicitando permisos...";
+
+  const permission = await Notification.requestPermission();
+
+  if(permission !== "granted"){
+    document.getElementById("footer").innerText = "Permisos denegados ❌";
+    return;
+  }
+
+  const token = await getToken(messaging, {
+    vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+    serviceWorkerRegistration: registration
+  });
+
+  console.log("TOKEN:", token);
+
+  // Guardar token en servidor
+  await fetch("/registro",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json"},
+    body:JSON.stringify({ token })
+  });
+
+  document.getElementById("footer").innerText = "Sistema listo ✅";
+
+});
+
+// Recibir mensajes en primer plano
+onMessage(messaging, (payload) => {
+
+  console.log("Mensaje recibido:", payload);
+
+  const tipo = payload.data?.tipo || "ALERTA";
+
+  document.getElementById("footer").innerText =
+    "🚨 " + tipo + " recibida";
+
+});
+
+</script>
+
+<!-- FUNCION ALERTA -->
 <script>
 
 async function enviarAlerta(tipo){
