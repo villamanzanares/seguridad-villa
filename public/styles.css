@@ -25,80 +25,73 @@ margin-bottom:10px;
 h1{
 margin:0;
 font-size:26px;
-letter-spacing:1px;
 opacity:0.9;
+}
+
+/* SELECT */
+.ubicacion{
+width:100%;
+padding:12px;
+border-radius:10px;
+border:none;
+font-size:16px;
 }
 
 /* BOTONERA */
 .botonera{
 flex:1;
-
 display:flex;
 flex-direction:column;
 justify-content:center;
-
-gap:18px;
-
+gap:16px;
 width:90%;
 max-width:420px;
 }
 
-/* FILA */
 .fila{
 display:grid;
 grid-template-columns:1fr 1fr;
-gap:18px;
+gap:16px;
 }
 
 /* BOTONES */
 .btn{
 height:110px;
-
 font-size:20px;
 font-weight:bold;
-
 border:none;
 border-radius:16px;
-
 color:white;
 cursor:pointer;
-
 box-shadow:0 6px 18px rgba(0,0,0,0.4);
 transition:all 0.15s ease;
 }
 
 .btn:active{
 transform:scale(0.96);
-box-shadow:0 3px 10px rgba(0,0,0,0.6);
 }
 
-.emergencia{
-background:linear-gradient(145deg,#ff2b2b,#cc0000);
-}
+.emergencia{ background:#ff2b2b; }
+.ambulancia{ background:#2b7cff; }
+.bomberos{ background:#ff7b00; }
+.carabineros{ background:#2bbf4b; }
 
-.ambulancia{
-background:linear-gradient(145deg,#2b7cff,#1a4dcc);
-}
-
-.bomberos{
-background:linear-gradient(145deg,#ff7b00,#cc5200);
-}
-
-.carabineros{
-background:linear-gradient(145deg,#2bbf4b,#1d8c34);
-}
-
-/* FOOTER */
+/* FOOTER IMPACTO */
 #footer{
 width:100%;
-
-background:#1a1a1a;
+background:#111;
 text-align:center;
+padding:20px;
+border-top:2px solid #222;
+}
 
-padding:14px;
+#alertaTipo{
+font-size:28px;
+font-weight:bold;
+margin-bottom:6px;
+}
 
-font-size:14px;
-letter-spacing:0.5px;
-
-border-top:1px solid rgba(255,255,255,0.05);
+#alertaUsuario{
+font-size:22px;
+opacity:0.9;
 }
