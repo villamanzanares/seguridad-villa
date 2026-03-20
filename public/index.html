@@ -126,7 +126,10 @@ registrarToken();
 
 // 📩 Mensajes en primer plano
 onMessage(messaging, (payload) => {
-  footer.textContent = `🚨 ${payload.notification.title}: ${payload.notification.body}`;
+  const mensaje = `📩 Recibido: ${payload.notification.body}`;
+  
+  footer.textContent = mensaje;
+
   sirena.play().catch(()=>{});
 });
 
