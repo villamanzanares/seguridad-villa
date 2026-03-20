@@ -1,70 +1,117 @@
 import express from "express";
+import cors from "cors";
 import path from "path";
+import { fileURLToPath } from "url";
+
+// Firebase Admin
 import admin from "firebase-admin";
 
+// 🔥 CONFIGURACIÓN BÁSICA
 const app = express();
+app.use(cors());
 app.use(express.json());
 
-// ------------------ Servir archivos estáticos ------------------
-app.use(express.static(path.join(process.cwd(), "public")));
+// 🧭 Necesario para __dirname en ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Endpoint raíz para servir index.html
-app.get("/", (req, res) => {
-  res.sendFile(path.join(process.cwd(), "public/index.html"));
-});
+// 📁 Servir carpeta public
+app.use(express.static(path.join(__dirname, "public")));
 
-// ------------------ Inicializar Firebase Admin ------------------
+// 🔥 INICIALIZAR FIREBASE ADMIN
 try {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+    credential: admin.credential.cert(serviceAccount),
   });
 
-  console.log("Firebase Admin inicializado ✅");
-
-} catch (err) {
-  console.error("Error inicializando Firebase Admin:", err);
+  console.log("🔥 Firebase Admin inicializado");
+} catch (error) {
+  console.error("❌ Error inicializando Firebase:", error);
 }
 
-const messaging = admin.messaging();
-const db = admin.firestore();
+// 🧠 Almacenamiento temporal de tokens (puedes cambiar a Firestore después)
+let tokens = [];
 
-// ------------------ Endpoint para enviar alertas ------------------
+// 📲 REGISTRAR TOKEN
+app.post("/registrar-token", (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: "Token requerido" });
+  }
+
+  if (!tokens.includes(token)) {
+    tokens.push(token);
+  }
+
+  console.log("📲 Token registrado:", token);
+  res.json({ success: true });
+});
+
+// 🚨 ENVIAR ALERTA
 app.post("/enviar-alerta", async (req, res) => {
-  const { tipo } = req.body;
+  const { tipo, lat, lng } = req.body;
+
+  if (!tipo) {
+    return res.status(400).json({ error: "Tipo de alerta requerido" });
+  }
+
+  if (tokens.length === 0) {
+    return res.json({
+      success: true,
+      mensaje: "No hay usuarios registrados",
+      enviados: 0,
+    });
+  }
+
+  const message = {
+    notification: {
+      title: `🚨 ALERTA: ${tipo}`,
+      body: `Ubicación: ${lat || "N/A"}, ${lng || "N/A"}`,
+    },
+    data: {
+      tipo: tipo || "",
+      lat: lat ? String(lat) : "",
+      lng: lng ? String(lng) : "",
+    },
+    tokens: tokens,
+  };
 
   try {
-    // Leer todos los tokens registrados
-    const snapshot = await db.collection("tokens").get();
-    const tokens = snapshot.docs.map(doc => doc.data().token);
+    const response = await admin.messaging().sendEachForMulticast(message);
 
-    if (!tokens.length) {
-      return res.json({ id: Date.now(), enviado: 0 });
-    }
+    console.log("📡 Resultado envío:", response);
 
-    // Preparar mensaje
-    const message = {
-      tokens,
-      notification: {
-        title: `🚨 ${tipo}`,
-        body: `Alerta ${tipo} enviada`,
-      },
-    };
+    res.json({
+      success: true,
+      enviados: response.successCount,
+      fallidos: response.failureCount,
+    });
+  } catch (error) {
+    console.error("❌ Error enviando alerta:", error);
 
-    // Enviar notificaciones
-    const response = await messaging.sendMulticast(message);
-
-    console.log(`Alerta "${tipo}" enviada a ${response.successCount} dispositivos ✅`);
-
-    res.json({ id: Date.now(), enviado: response.successCount });
-
-  } catch (err) {
-    console.error("Error enviando alerta:", err);
-    res.status(500).json({ id: Date.now(), enviado: 0, error: err.message });
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
   }
 });
 
-// ------------------ Iniciar servidor ------------------
+// 🌐 RUTA PRINCIPAL (IMPORTANTE PARA EL "Cannot GET /")
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// 🩺 TEST RÁPIDO
+app.get("/ping", (req, res) => {
+  res.send("pong 🏓");
+});
+
+// 🚀 PUERTO
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Servidor escuchando en puerto ${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+});
