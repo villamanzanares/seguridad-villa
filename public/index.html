@@ -126,9 +126,9 @@ registrarToken();
 
 // 📩 Mensajes en primer plano
 onMessage(messaging, (payload) => {
-  const mensaje = `📩 Recibido: ${payload.notification.body}`;
-  
-  footer.textContent = mensaje;
+  const hora = new Date().toLocaleTimeString();
+
+  footer.textContent = `🚨 ${payload.notification.body} recibida a las ${hora}`;
 
   sirena.play().catch(()=>{});
 });
