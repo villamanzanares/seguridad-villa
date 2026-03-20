@@ -1,79 +1,49 @@
 import express from "express";
 import admin from "firebase-admin";
+import fs from "fs";
 
 const app = express();
-const PORT = process.env.PORT || 10000;
-
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static('public'));
 
-/* FIREBASE */
-const serviceAccount = JSON.parse(
-  process.env.FIREBASE_SERVICE_ACCOUNT_JSON
-);
+// ------------------- FIREBASE ADMIN -------------------
+const serviceAccount = JSON.parse(fs.readFileSync("serviceAccountKey.json", "utf8"));
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
 const db = admin.firestore();
+const messaging = admin.messaging();
 
-console.log("Firebase Admin iniciado ✅");
-
-/* =========================
-   SUBSCRIBE
-========================= */
-
-app.post("/subscribe", async (req, res) => {
-  const { token } = req.body;
+// ------------------- RUTA ENVIAR ALERTA -------------------
+app.post("/enviar-alerta", async (req, res) => {
+  const { tipo } = req.body;
 
   try {
-    await admin.messaging().subscribeToTopic(token, "vecinos");
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("Error subscribe:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
+    const tokensSnapshot = await db.collection("tokens").get();
+    const tokens = tokensSnapshot.docs.map(doc => doc.data().token);
 
-/* =========================
-   ALERTA
-========================= */
+    if (!tokens.length) return res.status(400).json({ error: "No hay tokens registrados" });
 
-app.post("/alerta", async (req, res) => {
-  const { tipo, usuario, telefono, casa, villa } = req.body;
-
-  try {
-
-    /* GUARDAR */
-    await db.collection("alertas").add({
-      tipo,
-      usuario,
-      telefono,
-      casa,
-      villa,
-      timestamp: admin.firestore.FieldValue.serverTimestamp()
-    });
-
-    /* PUSH */
-    await admin.messaging().send({
+    const message = {
       notification: {
         title: `🚨 ${tipo}`,
-        body: `${usuario} - ${villa}`
+        body: `Alerta vecinal: ${tipo}`
       },
-      topic: "vecinos"
-    });
+      tokens
+    };
 
-    console.log("Alerta enviada:", tipo);
+    const response = await messaging.sendMulticast(message);
+    console.log("Notificación enviada a:", tokens.length, "devices");
 
-    res.json({ ok: true });
-
+    res.json({ id: new Date().getTime(), enviado: response.successCount });
   } catch (err) {
-    console.error("Error alerta:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Error enviando alerta:", err);
+    res.status(500).json({ error: "Error enviando alerta" });
   }
 });
 
-app.listen(PORT, () => {
-  console.log("Servidor corriendo en puerto", PORT);
-});
+// ------------------- SERVIDOR -------------------
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
