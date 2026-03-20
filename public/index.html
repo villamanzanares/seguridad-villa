@@ -4,9 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Villa Segura</title>
-  <link rel="stylesheet" href="style.css">
   <style>
-    /* ------------------ CSS PREMIUM INCLUIDO ------------------ */
+    /* ------------------ CSS PREMIUM ------------------ */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -47,10 +46,7 @@
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
 
-    #botones .alerta:hover {
-      background: #ff7875;
-      transform: scale(1.05);
-    }
+    #botones .alerta:hover { background: #ff7875; transform: scale(1.05); }
 
     #botones .alerta[data-tipo="ROBO"] { background: #faad14; }
     #botones .alerta[data-tipo="INCENDIO"] { background: #f5222d; }
@@ -86,7 +82,6 @@
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging.js";
     import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
 
-    // ------------------- CONFIG FIREBASE -------------------
     const firebaseConfig = {
       apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
       authDomain: "alerta-rosko.firebaseapp.com",
@@ -96,7 +91,6 @@
       appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
     };
 
-
     const app = initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
     const db = getFirestore(app);
@@ -104,31 +98,24 @@
     const footer = document.getElementById("footer");
     const sirena = document.getElementById("sirena");
 
-    // ------------------- REGISTRAR TOKEN -------------------
+    // Registrar token en Firestore
     async function registrarToken() {
       try {
         const currentToken = await getToken(messaging, { vapidKey: 'BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw' });
-        console.log("TOKEN ACTUAL:", currentToken);
         if (currentToken) {
           await addDoc(collection(db, "tokens"), { token: currentToken, fecha: new Date() });
-          console.log("Token registrado en Firestore ✅");
-        } else {
-          console.warn("No se obtuvo token. Verifica permisos de notificación");
         }
-      } catch (err) {
-        console.error("Error al registrar token:", err);
-      }
+      } catch (err) { console.error("Error registrando token:", err); }
     }
     registrarToken();
 
-    // ------------------- ESCUCHAR MENSAJES -------------------
+    // Escuchar notificaciones en primer plano
     onMessage(messaging, (payload) => {
-      console.log("Notificación recibida:", payload);
       footer.textContent = `Alerta: ${payload.notification.title} - ${payload.notification.body} ✅`;
-      sirena.play().catch(()=>{}); 
+      sirena.play().catch(()=>{});
     });
 
-    // ------------------- BOTONES -------------------
+    // Enviar alertas al backend
     document.querySelectorAll(".alerta").forEach(btn => {
       btn.addEventListener("click", async () => {
         const tipo = btn.dataset.tipo;
@@ -139,7 +126,7 @@
             body: JSON.stringify({ tipo })
           });
           const data = await res.json();
-          footer.textContent = `Alerta enviada: ${tipo} ✅ ID: ${data.id}`;
+          footer.textContent = `Alerta enviada: ${tipo} ✅ ID: ${data.id || 'sin ID'} / Enviada a: ${data.enviado || 0}`;
         } catch (err) {
           footer.textContent = `Error al enviar alerta ❌`;
           console.error(err);
@@ -147,7 +134,7 @@
       });
     });
 
-    // ------------------- AJUSTE DINÁMICO DE ALTURA -------------------
+    // Ajuste dinámico de altura de botones
     function ajustarAlturaBotones() {
       const botones = document.querySelectorAll("#botones .alerta");
       const contenedor = document.getElementById("botones");
