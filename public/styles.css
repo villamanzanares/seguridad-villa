@@ -1,211 +1,63 @@
-/* =========================
-   BASE GENERAL
-========================= */
-
+/* Reset básico */
 body {
+  font-family: Arial, sans-serif;
   margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #0f172a;
-  color: white;
-
+  padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-
-  min-height: 100vh;
+  background: #f9f9f9;
 }
 
-/* =========================
-   HEADER
-========================= */
-
-.header {
-  text-align: center;
-  margin-top: 20px;
-}
-
-.logo {
-  width: 80px;
-  margin-bottom: 10px;
-}
-
-h1 {
-  margin: 0;
-  font-size: 26px;
-}
-
-.sub {
-  margin: 5px 0 0 0;
-  font-size: 14px;
-  color: #94a3b8;
-}
-
-/* =========================
-   TARJETA REGISTRO
-========================= */
-
-.card {
-  background: #1e293b;
-  padding: 20px;
-  border-radius: 14px;
-  width: 90%;
-  max-width: 400px;
-  margin-top: 20px;
-
+/* Contenedor de botones */
+#botones {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  gap: 15px; /* espacio entre botones */
+  width: 100%;
+  max-width: 400px; /* opcional para pantallas grandes */
 }
 
-.card h2 {
-  margin: 0 0 10px 0;
-  text-align: center;
-}
-
-.card input {
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
-  font-size: 14px;
-}
-
-/* BOTÓN GUARDAR */
-.guardar {
-  background: #22c55e;
-  border-radius: 10px;
-}
-
-/* =========================
-   APP
-========================= */
-
-.hidden {
-  display: none;
-}
-
-/* =========================
-   BOTONERA TIPO CAJA
-========================= */
-
-.botonera {
-  width: 92%;
-  max-width: 420px;
-  margin: 20px auto 120px auto;
-}
-
-/* FILAS */
-.fila {
-  display: flex;
-  gap: 10px;
-}
-
-/* BOTONES BASE */
-.btn {
-  flex: 1;
-  padding: 22px;
-  font-size: 16px;
+/* Botones recursivos casi ancho total */
+#botones .alerta {
+  width: 90%; /* casi todo el ancho del contenedor */
+  max-width: 380px; /* límite superior */
+  padding: 15px 0;
+  font-size: 1.1rem;
   font-weight: bold;
   border: none;
+  border-radius: 12px;
+  background: #ff4d4f;
   color: white;
   cursor: pointer;
-
-  transition: all 0.15s ease;
-  box-shadow: 0 5px 0 rgba(0,0,0,0.4);
+  transition: transform 0.2s, background 0.2s;
 }
 
-/* EFECTO PRESIÓN REAL */
-.btn:active {
-  transform: translateY(4px);
-  box-shadow: 0 1px 0 rgba(0,0,0,0.4);
+/* Hover / efecto visual */
+#botones .alerta:hover {
+  background: #ff7875;
+  transform: scale(1.03);
 }
 
-/* =========================
-   COLORES BOTONES
-========================= */
-
-.emergencia {
-  background: #dc2626;
+/* Diferentes colores según tipo de alerta */
+#botones .alerta[data-tipo="ROBO"] {
+  background: #faad14;
+}
+#botones .alerta[data-tipo="INCENDIO"] {
+  background: #f5222d;
+}
+#botones .alerta[data-tipo="ASISTENCIA"] {
+  background: #52c41a;
+}
+#botones .alerta[data-tipo="EMERGENCIA"] {
+  background: #ff4d4f;
 }
 
-.ambulancia {
-  background: #2563eb;
-}
-
-.bomberos {
-  background: #ea580c;
-}
-
-.carabineros {
-  background: #16a34a;
-}
-
-/* =========================
-   FORMAS TIPO CAJA
-========================= */
-
-/* FILA 1 */
-.botonera > .emergencia {
-  width: 100%;
-  border-radius: 20px 20px 0 0;
-  margin-bottom: 10px;
-}
-
-/* FILA 2 */
-.fila .btn {
-  border-radius: 0;
-  margin-bottom: 10px;
-}
-
-/* FILA 3 */
-.botonera > .carabineros {
-  width: 100%;
-  border-radius: 0 0 20px 20px;
-}
-
-/* =========================
-   FOOTER PROTAGONISTA
-========================= */
-
-#footer {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-
-  background: #020617;
-  border-top: 2px solid #1e293b;
-
-  padding: 18px 10px;
-
-  text-align: center;
-
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  z-index: 1000;
-}
-
-/* TIPO DE ALERTA */
-.footer-tipo {
-  font-size: 18px;
+/* Footer */
+footer {
+  margin-top: 30px;
+  font-size: 1rem;
   font-weight: bold;
-}
-
-/* USUARIO */
-.footer-usuario {
-  font-size: 15px;
-}
-
-/* UBICACIÓN */
-.footer-villa {
-  font-size: 13px;
-  color: #94a3b8;
-}
-
-/* =========================
-   HISTORIAL (OCULTO VISUALMENTE)
-========================= */
-
-.historial-box {
-  display: none;
+  color: #333;
 }
