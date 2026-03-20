@@ -5,6 +5,68 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Villa Segura</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* ------------------ CSS PREMIUM INCLUIDO ------------------ */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #f9f9f9;
+      min-height: 100vh;
+    }
+
+    #botones {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 500px;
+      box-sizing: border-box;
+      padding: 0 10px;
+      gap: calc(10px + 1vh);
+    }
+
+    #botones .alerta {
+      flex: 1 1 auto;
+      width: 95%;
+      max-width: 400px;
+      min-width: 180px;
+      padding: calc(12px + 0.5vh) 0;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      background: #ff4d4f;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.2s ease, background 0.2s ease;
+      text-align: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    #botones .alerta:hover {
+      background: #ff7875;
+      transform: scale(1.05);
+    }
+
+    #botones .alerta[data-tipo="ROBO"] { background: #faad14; }
+    #botones .alerta[data-tipo="INCENDIO"] { background: #f5222d; }
+    #botones .alerta[data-tipo="ASISTENCIA"] { background: #52c41a; }
+    #botones .alerta[data-tipo="EMERGENCIA"] { background: #ff4d4f; }
+
+    footer {
+      margin-top: 30px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #333;
+    }
+
+    @media (min-width: 600px) { #botones .alerta { width: 90%; padding: calc(14px + 0.5vh) 0; } }
+    @media (min-width: 1024px) { #botones .alerta { width: 80%; padding: calc(16px + 0.5vh) 0; } }
+  </style>
 </head>
 <body>
   <h1>Villa Segura - Alertas Vecinales</h1>
@@ -17,7 +79,6 @@
   </div>
 
   <footer id="footer">Estado: listo ✅</footer>
-
   <audio id="sirena" src="sirena.mp3"></audio>
 
   <script type="module">
@@ -27,13 +88,14 @@
 
     // ------------------- CONFIG FIREBASE -------------------
     const firebaseConfig = {
-        apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-        authDomain: "alerta-rosko.firebaseapp.com",
-        projectId: "alerta-rosko",
-        storageBucket: "alerta-rosko.firebasestorage.app",
-        messagingSenderId: "1022811358317",
-        appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+      apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+      authDomain: "alerta-rosko.firebaseapp.com",
+      projectId: "alerta-rosko",
+      storageBucket: "alerta-rosko.firebasestorage.app",
+      messagingSenderId: "1022811358317",
+      appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
     };
+
 
     const app = initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
@@ -47,7 +109,6 @@
       try {
         const currentToken = await getToken(messaging, { vapidKey: 'BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw' });
         console.log("TOKEN ACTUAL:", currentToken);
-
         if (currentToken) {
           await addDoc(collection(db, "tokens"), { token: currentToken, fecha: new Date() });
           console.log("Token registrado en Firestore ✅");
@@ -58,7 +119,6 @@
         console.error("Error al registrar token:", err);
       }
     }
-
     registrarToken();
 
     // ------------------- ESCUCHAR MENSAJES -------------------
@@ -86,6 +146,25 @@
         }
       });
     });
+
+    // ------------------- AJUSTE DINÁMICO DE ALTURA -------------------
+    function ajustarAlturaBotones() {
+      const botones = document.querySelectorAll("#botones .alerta");
+      const contenedor = document.getElementById("botones");
+      if (!botones.length) return;
+
+      const contenedorHeight = contenedor.clientHeight;
+      const gap = parseFloat(getComputedStyle(contenedor).gap) || 10;
+      const totalGap = gap * (botones.length - 1);
+      const alturaDisponible = contenedorHeight - totalGap;
+      const alturaBoton = alturaDisponible / botones.length;
+
+      botones.forEach(btn => { btn.style.height = `${alturaBoton}px`; });
+    }
+
+    window.addEventListener("load", ajustarAlturaBotones);
+    window.addEventListener("resize", ajustarAlturaBotones);
+
   </script>
 </body>
 </html>
