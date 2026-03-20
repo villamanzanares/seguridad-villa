@@ -1,160 +1,184 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Villa Segura</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: #f5f7fa;
-      min-height: 100vh;
-    }
+<title>Villa Segura</title>
 
-    h1 { margin-bottom: 20px; }
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: white;
+  text-align: center;
+}
 
-    #botones {
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      max-width: 400px;
-      gap: 15px;
-    }
+h1 {
+  margin-top: 10px;
+}
 
-    .alerta {
-      padding: 18px;
-      font-size: 18px;
-      font-weight: bold;
-      border: none;
-      border-radius: 12px;
-      color: white;
-      cursor: pointer;
-    }
+.botones {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 15px;
+}
 
-    .EMERGENCIA { background: #ff4d4f; }
-    .ROBO { background: #faad14; }
-    .INCENDIO { background: #f5222d; }
-    .ASISTENCIA { background: #52c41a; }
+button {
+  padding: 15px;
+  font-size: 18px;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+}
 
-    footer {
-      margin-top: 30px;
-      font-weight: bold;
-    }
-  </style>
+.emergencia { background: red; color: white; }
+.robo { background: orange; color: black; }
+.incendio { background: darkred; color: white; }
+.asistencia { background: green; color: white; }
+
+#footer {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #000;
+  padding: 15px;
+  border-top: 2px solid red;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.footer-contenido {
+  max-width: 500px;
+  margin: auto;
+  text-align: center;
+}
+
+.alerta-titulo {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ff3b3b;
+  margin-bottom: 5px;
+}
+
+.footer-btn {
+  margin-top: 10px;
+  padding: 10px;
+  background: #2196F3;
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+}
+</style>
 </head>
 
 <body>
 
 <h1>🚨 Villa Segura</h1>
 
-<div id="botones">
-  <button class="alerta EMERGENCIA" data-tipo="EMERGENCIA">EMERGENCIA</button>
-  <button class="alerta ROBO" data-tipo="ROBO">ROBO</button>
-  <button class="alerta INCENDIO" data-tipo="INCENDIO">INCENDIO</button>
-  <button class="alerta ASISTENCIA" data-tipo="ASISTENCIA">ASISTENCIA</button>
+<div class="botones">
+  <button class="emergencia" onclick="enviarAlerta('EMERGENCIA')">🚨 EMERGENCIA</button>
+  <button class="robo" onclick="enviarAlerta('ROBO')">🕵️ ROBO</button>
+  <button class="incendio" onclick="enviarAlerta('INCENDIO')">🔥 INCENDIO</button>
+  <button class="asistencia" onclick="enviarAlerta('ASISTENCIA')">🆘 ASISTENCIA</button>
 </div>
 
-<footer id="footer">Iniciando...</footer>
+<div id="footer">
+  <div class="footer-contenido" id="footerContenido">
+    Esperando alerta...
+  </div>
+</div>
 
-<audio id="sirena" src="sirena.mp3"></audio>
+<script>
+let ultimaUbicacion = null;
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
-import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+// 🔊 sonido
+const audio = new Audio('/sirena.mp3');
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-  authDomain: "alerta-rosko.firebaseapp.com",
-  projectId: "alerta-rosko",
-  storageBucket: "alerta-rosko.firebasestorage.app",
-  messagingSenderId: "1022811358317",
-  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-};
-
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-const db = getFirestore(app);
-
-const footer = document.getElementById("footer");
-const sirena = document.getElementById("sirena");
-
-// 🔥 Registrar Service Worker
-async function registrarSW() {
-  try {
-    const reg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-    console.log("SW registrado ✅");
-    return reg;
-  } catch (err) {
-    console.error("Error SW:", err);
-  }
+// 📍 obtener ubicación
+function obtenerUbicacion() {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        };
+        ultimaUbicacion = coords;
+        resolve(coords);
+      },
+      (err) => reject(err)
+    );
+  });
 }
 
-// 🔑 Registrar token CORRECTAMENTE
-async function registrarToken() {
+// 🚀 enviar alerta
+async function enviarAlerta(tipo) {
   try {
-    const registration = await registrarSW();
+    const ubicacion = await obtenerUbicacion();
 
-    const token = await getToken(messaging, {
-      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-      serviceWorkerRegistration: registration
+    const data = {
+      tipo,
+      lat: ubicacion.lat,
+      lng: ubicacion.lng,
+      nombre: "Juan García",
+      telefono: "+5691234567",
+      direccion: "Casa 12",
+      villa: "Villa Segura"
+    };
+
+    const res = await fetch('/alerta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
     });
 
-    if (token) {
-      await setDoc(doc(db, "tokens", token), {
-        fecha: new Date()
-      });
+    const json = await res.json();
 
-      footer.textContent = "Token registrado ✅";
-    } else {
-      footer.textContent = "No se obtuvo token ❌";
-    }
+    actualizarFooter(data);
 
-  } catch (err) {
-    console.error("Error token:", err);
-    footer.textContent = "Error registrando token ❌";
+  } catch (error) {
+    console.error(error);
   }
 }
 
-registrarToken();
+// 🧠 actualizar footer
+function actualizarFooter(data) {
+  document.getElementById("footerContenido").innerHTML = `
+    <div class="alerta-titulo">🚨 Emergencia: ${data.tipo}</div>
+    <div><b>Enviado por:</b> ${data.nombre}</div>
+    <div><b>Fono:</b> ${data.telefono}</div>
+    <div><b>Casa/Dpto:</b> ${data.direccion}</div>
+    <div><b>Villa:</b> ${data.villa}</div>
+    <button class="footer-btn" onclick="abrirMapa(${data.lat}, ${data.lng})">
+      📍 Ver ubicación
+    </button>
+  `;
+}
 
-// 📩 Mensajes en primer plano
-onMessage(messaging, (payload) => {
-  const hora = new Date().toLocaleTimeString();
+// 🗺 abrir mapa
+function abrirMapa(lat, lng) {
+  const url = `https://www.google.com/maps?q=${lat},${lng}`;
+  window.open(url, '_blank');
+}
 
-  footer.textContent = `🚨 ${payload.notification.body} recibida a las ${hora}`;
+// 🔔 recibir mensajes (cuando llegue push o simulado)
+function recibirAlerta(data) {
+  audio.play();
 
-  sirena.play().catch(()=>{});
-});
-
-// 🚀 Enviar alerta
-document.querySelectorAll(".alerta").forEach(btn => {
-  btn.addEventListener("click", async () => {
-    const tipo = btn.dataset.tipo;
-
-    try {
-      const res = await fetch("/enviar-alerta", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tipo })
-      });
-
-      const data = await res.json();
-
-      footer.textContent = `Alerta enviada: ${tipo} ✅ / Enviada a: ${data.enviado}`;
-
-    } catch (err) {
-      footer.textContent = "Error enviando ❌";
-      console.error(err);
-    }
+  actualizarFooter({
+    tipo: data.tipo,
+    nombre: data.nombre || "Vecino",
+    telefono: data.telefono || "No disponible",
+    direccion: data.direccion || "-",
+    villa: data.villa || "-",
+    lat: data.lat,
+    lng: data.lng
   });
-});
+}
 </script>
 
 </body>
