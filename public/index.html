@@ -1,135 +1,233 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Villa Segura</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Villa Segura</title>
 
-<style>
-body {
-  font-family: Arial;
-  text-align: center;
-  margin: 0;
-}
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #f4f6f8;
+      min-height: 100vh;
+    }
 
-button {
-  width: 90%;
-  padding: 20px;
-  margin: 10px;
-  font-size: 20px;
-  border-radius: 10px;
-}
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
 
-#footer {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: #111;
-  color: white;
-  padding: 15px;
-  font-size: 16px;
-  text-align: center;
-}
-</style>
+    #botones {
+      width: 100%;
+      max-width: 500px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    button {
+      width: 95%;
+      margin: auto;
+      padding: 18px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+    }
+
+    .emergencia { background: #ff4d4f; }
+    .robo { background: #faad14; }
+    .incendio { background: #f5222d; }
+    .asistencia { background: #52c41a; }
+
+    footer {
+      margin-top: 25px;
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+      font-size: 1rem;
+      font-weight: bold;
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      line-height: 1.5;
+    }
+
+    #btnMapa {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: #1890ff;
+      color: white;
+      cursor: pointer;
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
 
-<h2>🚨 Villa Segura</h2>
+<h1>🚨 Villa Segura</h1>
 
-<button onclick="enviar('EMERGENCIA')">🚨 EMERGENCIA</button>
-<button onclick="enviar('ROBO')">🕵️ ROBO</button>
-<button onclick="enviar('INCENDIO')">🔥 INCENDIO</button>
-<button onclick="enviar('ASISTENCIA')">🆘 ASISTENCIA</button>
+<div id="botones">
+  <button class="emergencia" onclick="enviar('EMERGENCIA')">EMERGENCIA</button>
+  <button class="robo" onclick="enviar('ROBO')">ROBO</button>
+  <button class="incendio" onclick="enviar('INCENDIO')">INCENDIO</button>
+  <button class="asistencia" onclick="enviar('ASISTENCIA')">ASISTENCIA</button>
+</div>
 
-<div id="footer">Esperando alerta...</div>
+<footer id="footer">
+  Estado: listo ✅
+  <br>
+  <button id="btnMapa">Ver ubicación</button>
+</footer>
+
+<audio id="sirena" src="sirena.mp3"></audio>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
 
-// 🔥 CONFIG (usa la tuya real)
 const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
   projectId: "alerta-rosko",
+  storageBucket: "alerta-rosko.firebasestorage.app",
   messagingSenderId: "1022811358317",
-  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+  appId: "1:1022811358317:web:xxxx"
 };
 
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
+const db = getFirestore(app);
 
-// 📱 Registrar token
+const footer = document.getElementById("footer");
+const btnMapa = document.getElementById("btnMapa");
+const sirena = document.getElementById("sirena");
+
+let enviando = false;
+let ultimaLat = null;
+let ultimaLng = null;
+
+// 🔔 REGISTRAR TOKEN
 async function registrarToken() {
   try {
     const token = await getToken(messaging, {
       vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
     });
 
-    await fetch("/registro-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token })
-    });
-
-    console.log("✅ Token enviado al server");
-  } catch (err) {
-    console.error("❌ Error token:", err);
+    if (token) {
+      await addDoc(collection(db, "tokens"), {
+        token,
+        fecha: new Date()
+      });
+    }
+  } catch (e) {
+    console.error("Error token:", e);
   }
 }
-
 registrarToken();
 
-// 📩 Recibir alerta
+// 🔊 RECIBIR MENSAJES
 onMessage(messaging, (payload) => {
-  console.log("📩 Mensaje recibido:", payload);
-  if (payload.data) recibirAlerta(payload.data);
-});
+  const data = payload.data;
 
-// 🎯 Mostrar alerta
-function recibirAlerta(data) {
-  const footer = document.getElementById("footer");
+  ultimaLat = data.lat;
+  ultimaLng = data.lng;
 
   footer.innerHTML = `
-    <div style="font-size:20px;"><b>🚨 Emergencia: ${data.tipo}</b></div>
-    <div>Enviado por: ${data.nombre}</div>
-    <div>Fono: ${data.telefono}</div>
-    <div>${data.direccion} - ${data.villa}</div>
-    <br>
-    <button onclick="abrirMapa('${data.lat}','${data.lng}')">
-      📍 Ver ubicación
-    </button>
+    🚨 Emergencia: ${data.tipo}<br><br>
+    Enviado por:<br>
+    ${data.nombre} / ${data.telefono}<br><br>
+    ${data.direccion} - ${data.villa}<br>
+    <button id="btnMapa">Ver ubicación</button>
   `;
+
+  document.getElementById("btnMapa").onclick = () => abrirMapa();
+
+  sirena.play().catch(()=>{});
+});
+
+// 📤 ENVIAR ALERTA
+window.enviar = (tipo) => {
+
+  if (enviando) return;
+
+  enviando = true;
+  bloquearBotones(true);
+
+  footer.innerHTML = "⏳ Enviando alerta...";
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      try {
+
+        const res = await fetch("/enviar-alerta", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tipo,
+            nombre: "Juan García",
+            telefono: "+5691234567",
+            direccion: "Casa 12",
+            villa: "Villa Segura",
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          })
+        });
+
+        const data = await res.json();
+
+        footer.innerHTML = `
+          ✅ Emergencia enviada<br>
+          Tipo: ${tipo}<br>
+          Enviada a: ${data.enviados || 0}
+        `;
+
+      } catch (err) {
+        footer.innerHTML = "❌ Error al enviar";
+      } finally {
+        enviando = false;
+        bloquearBotones(false);
+      }
+    },
+    () => {
+      footer.innerHTML = "❌ Error GPS";
+      enviando = false;
+      bloquearBotones(false);
+    }
+  );
+};
+
+// 🗺️ MAPA
+function abrirMapa() {
+  if (!ultimaLat || !ultimaLng) return;
+  window.open(`https://www.google.com/maps?q=${ultimaLat},${ultimaLng}`, "_blank");
 }
 
-// 🗺️ Abrir mapa
-window.abrirMapa = (lat, lng) => {
-  window.open(`https://www.google.com/maps?q=${lat},${lng}`);
-};
-
-// 🚨 Enviar alerta
-window.enviar = (tipo) => {
-  navigator.geolocation.getCurrentPosition((pos) => {
-
-    fetch("/enviar-alerta", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        tipo,
-        nombre: "Juan García",
-        telefono: "+5691234567",
-        direccion: "Casa 12",
-        villa: "Villa Segura",
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude
-      })
-    });
-
+// 🔒 BLOQUEO BOTONES
+function bloquearBotones(estado) {
+  document.querySelectorAll("button").forEach(b => {
+    b.disabled = estado;
   });
-};
+}
+
 </script>
 
 </body>
