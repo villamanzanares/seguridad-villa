@@ -1,49 +1,50 @@
 import express from "express";
 import admin from "firebase-admin";
-import fs from "fs";
 
 const app = express();
 app.use(express.json());
-app.use(express.static('public'));
 
-// ------------------- FIREBASE ADMIN -------------------
-const serviceAccount = JSON.parse(fs.readFileSync("serviceAccountKey.json", "utf8"));
+// Inicializar Firebase Admin con variable de entorno
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-const db = admin.firestore();
 const messaging = admin.messaging();
+const db = admin.firestore();
 
-// ------------------- RUTA ENVIAR ALERTA -------------------
+// Endpoint para enviar alertas
 app.post("/enviar-alerta", async (req, res) => {
   const { tipo } = req.body;
-
   try {
-    const tokensSnapshot = await db.collection("tokens").get();
-    const tokens = tokensSnapshot.docs.map(doc => doc.data().token);
+    // Leer tokens
+    const snapshot = await db.collection("tokens").get();
+    const tokens = snapshot.docs.map(doc => doc.data().token);
 
-    if (!tokens.length) return res.status(400).json({ error: "No hay tokens registrados" });
+    if (!tokens.length) {
+      return res.json({ id: Date.now(), enviado: 0 });
+    }
 
+    // Preparar mensaje
     const message = {
+      tokens,
       notification: {
         title: `🚨 ${tipo}`,
-        body: `Alerta vecinal: ${tipo}`
+        body: `Alerta ${tipo} enviada`,
       },
-      tokens
     };
 
+    // Enviar notificaciones
     const response = await messaging.sendMulticast(message);
-    console.log("Notificación enviada a:", tokens.length, "devices");
 
-    res.json({ id: new Date().getTime(), enviado: response.successCount });
+    res.json({ id: Date.now(), enviado: response.successCount });
+
   } catch (err) {
     console.error("Error enviando alerta:", err);
-    res.status(500).json({ error: "Error enviando alerta" });
+    res.status(500).json({ id: Date.now(), enviado: 0, error: err.message });
   }
 });
 
-// ------------------- SERVIDOR -------------------
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Servidor escuchando en puerto ${PORT}`));
