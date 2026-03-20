@@ -16,16 +16,17 @@ body {
   align-items: center;
   gap: 15px; /* espacio entre botones */
   width: 100%;
-  max-width: 500px; /* opcional para pantallas grandes */
+  max-width: 500px; /* ancho máximo */
   box-sizing: border-box;
   padding: 0 10px;
 }
 
-/* Botones recursivos casi ancho total */
+/* Botones recursivos y proporcionales */
 #botones .alerta {
-  width: 95%; /* ancho móvil por defecto */
-  max-width: 400px; /* límite superior */
-  min-width: 200px; /* límite inferior */
+  flex: 1 1 auto;        /* permite crecer proporcionalmente */
+  width: 95%;            /* ancho base móvil */
+  max-width: 400px;      /* límite superior */
+  min-width: 180px;      /* límite inferior */
   padding: 15px 0;
   font-size: 1.1rem;
   font-weight: bold;
@@ -35,6 +36,7 @@ body {
   color: white;
   cursor: pointer;
   transition: transform 0.2s ease, background 0.2s ease;
+  text-align: center;
 }
 
 /* Hover / efecto visual */
@@ -43,7 +45,7 @@ body {
   transform: scale(1.03);
 }
 
-/* Diferentes colores según tipo de alerta */
+/* Colores según tipo de alerta */
 #botones .alerta[data-tipo="ROBO"] {
   background: #faad14;
 }
