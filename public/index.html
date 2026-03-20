@@ -1,81 +1,91 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Villa Segura</title>
-
-<link rel="stylesheet" href="styles.css">
-<link rel="icon" href="icon.png">
-
-<!-- Firebase (solo para compatibilidad futura, no rompe nada) -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Villa Segura</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+  <h1>Villa Segura - Alertas Vecinales</h1>
 
-<!-- HEADER -->
-<div class="header">
-  <img src="icon.png" class="logo">
-  <h1>Villa Segura</h1>
-  <p class="sub">Sistema de Alertas Vecinales</p>
-</div>
-
-<!-- REGISTRO -->
-<div id="registro" class="card">
-
-  <h2>Registro de vecino</h2>
-
-  <input id="nombre" placeholder="Nombre completo">
-  <input id="telefono" placeholder="Teléfono">
-  <input id="casa" placeholder="N° de casa">
-  <input id="villa" placeholder="Villa / Sector">
-
-  <button onclick="registrarUsuario()" class="btn guardar">
-    Guardar y continuar
-  </button>
-
-</div>
-
-<!-- APP -->
-<div id="app" class="hidden">
-
-  <div class="botonera">
-
-    <button class="btn emergencia" onclick="enviarAlerta('🚨 EMERGENCIA')">
-      🚨 EMERGENCIA
-    </button>
-
-    <div class="fila">
-      <button class="btn ambulancia" onclick="enviarAlerta('🚑 AMBULANCIA')">
-        🚑 AMBULANCIA
-      </button>
-
-      <button class="btn bomberos" onclick="enviarAlerta('🚒 BOMBEROS')">
-        🚒 BOMBEROS
-      </button>
-    </div>
-
-    <button class="btn carabineros" onclick="enviarAlerta('👮 CARABINEROS')">
-      👮 CARABINEROS
-    </button>
-
+  <div id="botones">
+    <button class="alerta" data-tipo="EMERGENCIA">EMERGENCIA</button>
+    <button class="alerta" data-tipo="ROBO">ROBO</button>
+    <button class="alerta" data-tipo="INCENDIO">INCENDIO</button>
+    <button class="alerta" data-tipo="ASISTENCIA">ASISTENCIA</button>
   </div>
 
-</div>
+  <footer id="footer">Estado: listo ✅</footer>
 
-<!-- FOOTER -->
-<div id="footer-alerta">
-  Esperando alertas...
-</div>
+  <audio id="sirena" src="sirena.mp3"></audio>
 
-<!-- APP SCRIPT -->
-<script type="module" src="app.js"></script>
-  
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+
+    // ------------------- CONFIG FIREBASE -------------------
+    const firebaseConfig = {
+        apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+        authDomain: "alerta-rosko.firebaseapp.com",
+        projectId: "alerta-rosko",
+        storageBucket: "alerta-rosko.firebasestorage.app",
+        messagingSenderId: "1022811358317",
+        appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+    const db = getFirestore(app);
+
+    const footer = document.getElementById("footer");
+    const sirena = document.getElementById("sirena");
+
+    // ------------------- REGISTRAR TOKEN -------------------
+    async function registrarToken() {
+      try {
+        const currentToken = await getToken(messaging, { vapidKey: 'BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw' });
+        console.log("TOKEN ACTUAL:", currentToken);
+
+        if (currentToken) {
+          await addDoc(collection(db, "tokens"), { token: currentToken, fecha: new Date() });
+          console.log("Token registrado en Firestore ✅");
+        } else {
+          console.warn("No se obtuvo token. Verifica permisos de notificación");
+        }
+      } catch (err) {
+        console.error("Error al registrar token:", err);
+      }
+    }
+
+    registrarToken();
+
+    // ------------------- ESCUCHAR MENSAJES -------------------
+    onMessage(messaging, (payload) => {
+      console.log("Notificación recibida:", payload);
+      footer.textContent = `Alerta: ${payload.notification.title} - ${payload.notification.body} ✅`;
+      sirena.play().catch(()=>{}); 
+    });
+
+    // ------------------- BOTONES -------------------
+    document.querySelectorAll(".alerta").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const tipo = btn.dataset.tipo;
+        try {
+          const res = await fetch("/enviar-alerta", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tipo })
+          });
+          const data = await res.json();
+          footer.textContent = `Alerta enviada: ${tipo} ✅ ID: ${data.id}`;
+        } catch (err) {
+          footer.textContent = `Error al enviar alerta ❌`;
+          console.error(err);
+        }
+      });
+    });
+  </script>
 </body>
 </html>
