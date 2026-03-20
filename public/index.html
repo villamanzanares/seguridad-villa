@@ -13,24 +13,23 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      background: #f9f9f9;
+      background: #f5f7fa;
       min-height: 100vh;
     }
+
+    h1 { margin-bottom: 20px; }
 
     #botones {
       display: flex;
       flex-direction: column;
-      align-items: center;
       width: 100%;
-      max-width: 500px;
-      padding: 0 10px;
-      gap: 12px;
+      max-width: 400px;
+      gap: 15px;
     }
 
-    #botones .alerta {
-      width: 90%;
-      padding: 16px 0;
-      font-size: 1.1rem;
+    .alerta {
+      padding: 18px;
+      font-size: 18px;
       font-weight: bold;
       border: none;
       border-radius: 12px;
@@ -38,10 +37,10 @@
       cursor: pointer;
     }
 
-    [data-tipo="EMERGENCIA"] { background: #ff4d4f; }
-    [data-tipo="ROBO"] { background: #faad14; }
-    [data-tipo="INCENDIO"] { background: #f5222d; }
-    [data-tipo="ASISTENCIA"] { background: #52c41a; }
+    .EMERGENCIA { background: #ff4d4f; }
+    .ROBO { background: #faad14; }
+    .INCENDIO { background: #f5222d; }
+    .ASISTENCIA { background: #52c41a; }
 
     footer {
       margin-top: 30px;
@@ -52,22 +51,23 @@
 
 <body>
 
-<h1>Villa Segura - Alertas Vecinales</h1>
+<h1>🚨 Villa Segura</h1>
 
 <div id="botones">
-  <button class="alerta" data-tipo="EMERGENCIA">EMERGENCIA</button>
-  <button class="alerta" data-tipo="ROBO">ROBO</button>
-  <button class="alerta" data-tipo="INCENDIO">INCENDIO</button>
-  <button class="alerta" data-tipo="ASISTENCIA">ASISTENCIA</button>
+  <button class="alerta EMERGENCIA" data-tipo="EMERGENCIA">EMERGENCIA</button>
+  <button class="alerta ROBO" data-tipo="ROBO">ROBO</button>
+  <button class="alerta INCENDIO" data-tipo="INCENDIO">INCENDIO</button>
+  <button class="alerta ASISTENCIA" data-tipo="ASISTENCIA">ASISTENCIA</button>
 </div>
 
-<footer id="footer">Inicializando...</footer>
+<footer id="footer">Iniciando...</footer>
+
 <audio id="sirena" src="sirena.mp3"></audio>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging.js";
-import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
@@ -85,49 +85,52 @@ const db = getFirestore(app);
 const footer = document.getElementById("footer");
 const sirena = document.getElementById("sirena");
 
-async function iniciar() {
+// 🔥 Registrar Service Worker
+async function registrarSW() {
   try {
-    // ✅ REGISTRAR SERVICE WORKER
-    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    const reg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    console.log("SW registrado ✅");
+    return reg;
+  } catch (err) {
+    console.error("Error SW:", err);
+  }
+}
 
-    // ✅ PEDIR PERMISO
-    const permiso = await Notification.requestPermission();
-    if (permiso !== "granted") {
-      footer.textContent = "Permiso de notificaciones denegado ❌";
-      return;
-    }
+// 🔑 Registrar token CORRECTAMENTE
+async function registrarToken() {
+  try {
+    const registration = await registrarSW();
 
-    // ✅ OBTENER TOKEN
     const token = await getToken(messaging, {
       vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
       serviceWorkerRegistration: registration
     });
 
     if (token) {
-      // ✅ GUARDAR TOKEN SIN DUPLICAR
       await setDoc(doc(db, "tokens", token), {
-        token,
         fecha: new Date()
       });
 
-      footer.textContent = "Conectado y listo 🔔";
+      footer.textContent = "Token registrado ✅";
+    } else {
+      footer.textContent = "No se obtuvo token ❌";
     }
 
   } catch (err) {
-    console.error(err);
-    footer.textContent = "Error inicializando ❌";
+    console.error("Error token:", err);
+    footer.textContent = "Error registrando token ❌";
   }
 }
 
-iniciar();
+registrarToken();
 
-// 🔔 NOTIFICACIÓN EN PRIMER PLANO
+// 📩 Mensajes en primer plano
 onMessage(messaging, (payload) => {
-  footer.textContent = `Alerta: ${payload.notification.title}`;
+  footer.textContent = `🚨 ${payload.notification.title}: ${payload.notification.body}`;
   sirena.play().catch(()=>{});
 });
 
-// 🚨 ENVÍO DE ALERTAS
+// 🚀 Enviar alerta
 document.querySelectorAll(".alerta").forEach(btn => {
   btn.addEventListener("click", async () => {
     const tipo = btn.dataset.tipo;
@@ -141,10 +144,11 @@ document.querySelectorAll(".alerta").forEach(btn => {
 
       const data = await res.json();
 
-      footer.textContent = `Alerta enviada: ${tipo} ✅ Enviada a: ${data.enviado}`;
+      footer.textContent = `Alerta enviada: ${tipo} ✅ / Enviada a: ${data.enviado}`;
 
     } catch (err) {
-      footer.textContent = "Error enviando alerta ❌";
+      footer.textContent = "Error enviando ❌";
+      console.error(err);
     }
   });
 });
