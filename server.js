@@ -50,12 +50,21 @@ app.post("/enviar-alerta", async (req, res) => {
 
     // 📩 Construir mensaje
     const message = {
-      notification: {
-        title: "🚨 Alerta vecinal",
-        body: tipo
-      },
-      tokens: tokens
-    };
+  notification: {
+    title: "🚨 Alerta vecinal",
+    body: data.tipo
+  },
+  data: {
+    tipo: data.tipo,
+    nombre: data.nombre || "Vecino",
+    telefono: data.telefono || "No disponible",
+    direccion: data.direccion || "-",
+    villa: data.villa || "-",
+    lat: String(data.lat || ""),
+    lng: String(data.lng || "")
+  },
+  tokens: tokens
+};
 
     // 🚀 Enviar a todos
     const response = await admin.messaging().sendEachForMulticast(message);
