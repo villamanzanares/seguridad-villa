@@ -16,13 +16,16 @@ body {
   align-items: center;
   gap: 15px; /* espacio entre botones */
   width: 100%;
-  max-width: 400px; /* opcional para pantallas grandes */
+  max-width: 500px; /* opcional para pantallas grandes */
+  box-sizing: border-box;
+  padding: 0 10px;
 }
 
 /* Botones recursivos casi ancho total */
 #botones .alerta {
-  width: 90%; /* casi todo el ancho del contenedor */
-  max-width: 380px; /* límite superior */
+  width: 95%; /* ancho móvil por defecto */
+  max-width: 400px; /* límite superior */
+  min-width: 200px; /* límite inferior */
   padding: 15px 0;
   font-size: 1.1rem;
   font-weight: bold;
@@ -31,7 +34,7 @@ body {
   background: #ff4d4f;
   color: white;
   cursor: pointer;
-  transition: transform 0.2s, background 0.2s;
+  transition: transform 0.2s ease, background 0.2s ease;
 }
 
 /* Hover / efecto visual */
@@ -60,4 +63,20 @@ footer {
   font-size: 1rem;
   font-weight: bold;
   color: #333;
+}
+
+/* -------- Media Queries para responsividad -------- */
+
+/* Tablets */
+@media (min-width: 600px) {
+  #botones .alerta {
+    width: 90%;
+  }
+}
+
+/* Escritorio */
+@media (min-width: 1024px) {
+  #botones .alerta {
+    width: 80%;
+  }
 }
