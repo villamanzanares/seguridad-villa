@@ -5,19 +5,27 @@ const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
-// 🔥 INICIALIZAR FIREBASE ADMIN
-// ⚠️ IMPORTANTE:
-// En producción (Render) usa variables de entorno o credenciales
-// Si estás en local, asegúrate de tener GOOGLE_APPLICATION_CREDENTIALS configurado
+
+// 🔥 INICIALIZAR FIREBASE DESDE VARIABLE DE ENTORNO
+// Usa la variable: FIREBASE_SERVICE_ACCOUNT_JSON
+
+let serviceAccount;
+
+try {
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+} catch (error) {
+  console.error('❌ Error leyendo FIREBASE_SERVICE_ACCOUNT_JSON');
+  process.exit(1);
+}
 
 admin.initializeApp({
-  credential: admin.credential.applicationDefault()
+  credential: admin.credential.cert(serviceAccount)
 });
 
 const db = admin.firestore();
 
 
-// 🧠 GUARDAR TOKEN (nuevo)
+// 📲 GUARDAR TOKEN (sin duplicados)
 app.post('/guardar-token', async (req, res) => {
   try {
     const { token } = req.body;
@@ -26,7 +34,6 @@ app.post('/guardar-token', async (req, res) => {
       return res.status(400).json({ error: 'Token requerido' });
     }
 
-    // Evitar duplicados
     const existe = await db.collection('tokens')
       .where('token', '==', token)
       .get();
@@ -44,7 +51,7 @@ app.post('/guardar-token', async (req, res) => {
     res.json({ ok: true });
 
   } catch (error) {
-    console.error('Error guardando token:', error);
+    console.error('❌ Error guardando token:', error);
     res.status(500).json({ error: 'Error guardando token' });
   }
 });
@@ -57,7 +64,7 @@ app.post('/alerta', async (req, res) => {
 
     console.log('🚨 Nueva alerta:', tipo);
 
-    // Guardar alerta en Firestore
+    // Guardar alerta
     const doc = await db.collection('alertas').add({
       tipo,
       lat: lat || null,
@@ -87,11 +94,12 @@ app.post('/alerta', async (req, res) => {
 
       console.log('✅ Notificaciones enviadas:', response.successCount);
 
-      // Limpiar tokens inválidos
+      // 🧹 Limpiar tokens inválidos
       response.responses.forEach((resp, idx) => {
         if (!resp.success) {
+          const docId = snapshot.docs[idx].id;
+          db.collection('tokens').doc(docId).delete();
           console.log('❌ Token inválido eliminado');
-          db.collection('tokens').doc(snapshot.docs[idx].id).delete();
         }
       });
     }
