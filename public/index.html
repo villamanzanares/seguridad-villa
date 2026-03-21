@@ -105,8 +105,9 @@ if ('serviceWorker' in navigator) {
 async function registrarToken() {
   try {
     const token = await getToken(messaging, {
-      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
-    });
+      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+      serviceWorkerRegistration: swRegistration
+});
 
     document.getElementById('estado').innerText = "Notificaciones activas ✅";
 
