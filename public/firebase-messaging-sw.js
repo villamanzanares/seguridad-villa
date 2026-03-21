@@ -12,45 +12,18 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// 🔔 Notificaciones en segundo plano (VERSIÓN ROBUSTA)
-messaging.onBackgroundMessage(function(payload) {
-  console.log("Mensaje recibido en background:", payload);
+messaging.onBackgroundMessage(payload => {
 
-  let title = "🚨 Alerta vecinal";
-  let body = "Nueva alerta recibida";
-
-  try {
-    if (payload.notification) {
-      title = payload.notification.title || title;
-      body = payload.notification.body || body;
-    } else if (payload.data) {
-      title = payload.data.title || title;
-      body = payload.data.body || body;
-    }
-  } catch (e) {
-    console.error("Error leyendo payload:", e);
-  }
+  const title = payload.notification?.title || "🚨 Alerta";
+  const body = payload.notification?.body || "Nueva alerta";
 
   self.registration.showNotification(title, {
-    body: body,
-    icon: '/icon.png',
-    data: payload.data || {}
+    body,
+    icon: '/icon.png'
   });
 });
 
-// 👉 Manejo de clic en la notificación
-self.addEventListener('notificationclick', function(event) {
+self.addEventListener('notificationclick', event => {
   event.notification.close();
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then(function(clientList) {
-        for (const client of clientList) {
-          if (client.url.includes('/') && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        return clients.openWindow('/');
-      })
-  );
+  event.waitUntil(clients.openWindow('/'));
 });
