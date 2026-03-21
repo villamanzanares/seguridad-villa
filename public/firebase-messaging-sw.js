@@ -16,20 +16,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Manejar mensajes cuando la app está en background
+// Manejar mensajes en background
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Mensaje recibido en background', payload);
 
-  // Mostrar notificación si viene la sección notification
   if (payload.notification) {
     self.registration.showNotification(payload.notification.title, {
       body: payload.notification.body,
       icon: '/icon.png'
     });
-  }
-
-  // Manejo opcional si solo viene data (no notification)
-  if (payload.data && !payload.notification) {
+  } else if (payload.data) {
     const tipo = payload.data.tipo || "Alerta";
     self.registration.showNotification(`🚨 Villa Segura: ${tipo}`, {
       body: `Se ha reportado ${tipo.toLowerCase()}`,
@@ -38,7 +34,7 @@ messaging.onBackgroundMessage((payload) => {
   }
 });
 
-// Opcional: click en notificación
+// Click en notificación
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   event.waitUntil(
