@@ -7,227 +7,158 @@
 
   <style>
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: #f4f6f8;
-      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+      text-align: center;
     }
 
     h1 {
-      text-align: center;
-      margin-bottom: 20px;
+      padding: 15px;
+      margin: 0;
+      font-size: 22px;
+      background: #020617;
     }
 
-    #botones {
-      width: 100%;
-      max-width: 500px;
-      display: flex;
-      flex-direction: column;
+    .container {
+      padding: 20px;
+    }
+
+    .botones {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 15px;
+      margin-top: 20px;
     }
 
     button {
-      width: 95%;
-      margin: auto;
-      padding: 18px;
-      font-size: 1.2rem;
-      font-weight: bold;
+      padding: 25px;
+      font-size: 18px;
       border: none;
       border-radius: 12px;
-      color: white;
       cursor: pointer;
+      font-weight: bold;
       transition: 0.2s;
     }
 
-    button:disabled {
-      opacity: 0.5;
+    button:active {
+      transform: scale(0.97);
     }
 
-    .emergencia { background: #ff4d4f; }
-    .robo { background: #faad14; }
-    .incendio { background: #f5222d; }
-    .asistencia { background: #52c41a; }
+    .emergencia { background: #dc2626; }
+    .robo { background: #ea580c; }
+    .incendio { background: #f59e0b; }
+    .asistencia { background: #2563eb; }
 
-    footer {
-      margin-top: 25px;
+    .footer {
+      position: fixed;
+      bottom: 0;
       width: 100%;
-      max-width: 500px;
-      text-align: center;
-      font-size: 1rem;
-      font-weight: bold;
-      background: white;
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      line-height: 1.5;
+      background: #020617;
+      padding: 10px;
+      font-size: 14px;
     }
 
-    #btnMapa {
-      margin-top: 10px;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      background: #1890ff;
-      color: white;
-      cursor: pointer;
-      display: none;
+    .bloqueado {
+      opacity: 0.5;
+      pointer-events: none;
     }
   </style>
 </head>
 
 <body>
 
-<h1>🚨 Villa Segura</h1>
+  <h1>🚨 Villa Segura</h1>
 
-<div id="botones">
-  <button class="emergencia" onclick="enviar('EMERGENCIA')">EMERGENCIA</button>
-  <button class="robo" onclick="enviar('ROBO')">ROBO</button>
-  <button class="incendio" onclick="enviar('INCENDIO')">INCENDIO</button>
-  <button class="asistencia" onclick="enviar('ASISTENCIA')">ASISTENCIA</button>
-</div>
+  <div class="container">
 
-<footer id="footer">
-  Estado: listo ✅
-  <br>
-  <button id="btnMapa">Ver ubicación</button>
-</footer>
+    <div class="botones">
+      <button type="button" class="emergencia" onclick="enviarAlerta('EMERGENCIA')">🚨 Emergencia</button>
+      <button type="button" class="robo" onclick="enviarAlerta('ROBO')">🚔 Robo</button>
+      <button type="button" class="incendio" onclick="enviarAlerta('INCENDIO')">🔥 Incendio</button>
+      <button type="button" class="asistencia" onclick="enviarAlerta('ASISTENCIA')">🆘 Asistencia</button>
+    </div>
 
-<audio id="sirena" src="sirena.mp3"></audio>
+  </div>
 
-<script type="module">
+  <div class="footer" id="estado">
+    Listo para enviar alertas
+  </div>
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging.js";
-import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-  authDomain: "alerta-rosko.firebaseapp.com",
-  projectId: "alerta-rosko",
-  storageBucket: "alerta-rosko.firebasestorage.app",
-  messagingSenderId: "1022811358317",
-  appId: "1:1022811358317:web:xxxx"
-};
-
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-const db = getFirestore(app);
-
-const footer = document.getElementById("footer");
-const btnMapa = document.getElementById("btnMapa");
-const sirena = document.getElementById("sirena");
-
+<script>
 let enviando = false;
-let ultimaLat = null;
-let ultimaLng = null;
 
-// 🔔 REGISTRAR TOKEN
-async function registrarToken() {
-  try {
-    const token = await getToken(messaging, {
-      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
-    });
-
-    if (token) {
-      await addDoc(collection(db, "tokens"), {
-        token,
-        fecha: new Date()
-      });
-    }
-  } catch (e) {
-    console.error("Error token:", e);
-  }
-}
-registrarToken();
-
-// 🔊 RECIBIR MENSAJES
-onMessage(messaging, (payload) => {
-  const data = payload.data;
-
-  ultimaLat = data.lat;
-  ultimaLng = data.lng;
-
-  footer.innerHTML = `
-    🚨 Emergencia: ${data.tipo}<br><br>
-    Enviado por:<br>
-    ${data.nombre} / ${data.telefono}<br><br>
-    ${data.direccion} - ${data.villa}<br>
-    <button id="btnMapa">Ver ubicación</button>
-  `;
-
-  document.getElementById("btnMapa").onclick = () => abrirMapa();
-
-  sirena.play().catch(()=>{});
-});
-
-// 📤 ENVIAR ALERTA
-window.enviar = (tipo) => {
-
-  if (enviando) return;
-
-  enviando = true;
-  bloquearBotones(true);
-
-  footer.innerHTML = "⏳ Enviando alerta...";
-
-  navigator.geolocation.getCurrentPosition(
-    async (pos) => {
-      try {
-
-        const res = await fetch("/enviar-alerta", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            tipo,
-            nombre: "Juan García",
-            telefono: "+5691234567",
-            direccion: "Casa 12",
-            villa: "Villa Segura",
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude
-          })
-        });
-
-        const data = await res.json();
-
-        footer.innerHTML = `
-          ✅ Emergencia enviada<br>
-          Tipo: ${tipo}<br>
-          Enviada a: ${data.enviados || 0}
-        `;
-
-      } catch (err) {
-        footer.innerHTML = "❌ Error al enviar";
-      } finally {
-        enviando = false;
-        bloquearBotones(false);
-      }
-    },
-    () => {
-      footer.innerHTML = "❌ Error GPS";
-      enviando = false;
-      bloquearBotones(false);
-    }
-  );
-};
-
-// 🗺️ MAPA
-function abrirMapa() {
-  if (!ultimaLat || !ultimaLng) return;
-  window.open(`https://www.google.com/maps?q=${ultimaLat},${ultimaLng}`, "_blank");
-}
-
-// 🔒 BLOQUEO BOTONES
-function bloquearBotones(estado) {
-  document.querySelectorAll("button").forEach(b => {
-    b.disabled = estado;
+// 🔒 Bloquea/desbloquea UI
+function bloquearUI(estado) {
+  const botones = document.querySelectorAll('button');
+  botones.forEach(btn => {
+    btn.disabled = estado;
+    btn.classList.toggle('bloqueado', estado);
   });
 }
 
+// 📢 Mensajes en footer
+function mostrarEstado(msg) {
+  document.getElementById('estado').innerText = msg;
+}
+
+// 📍 Obtener ubicación
+function obtenerUbicacion() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject('GPS no soportado');
+    } else {
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        }),
+        err => reject(err)
+      );
+    }
+  });
+}
+
+// 🚀 Enviar alerta (ANTI FREEZE)
+async function enviarAlerta(tipo) {
+  if (enviando) return;
+
+  enviando = true;
+  bloquearUI(true);
+  mostrarEstado('Enviando alerta...');
+
+  try {
+    let ubicacion = { lat: null, lng: null };
+
+    try {
+      ubicacion = await obtenerUbicacion();
+    } catch (e) {
+      console.warn('Sin GPS');
+    }
+
+    const res = await fetch('/alerta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tipo,
+        lat: ubicacion.lat,
+        lng: ubicacion.lng
+      })
+    });
+
+    const data = await res.json();
+
+    mostrarEstado(`Alerta ${tipo} enviada ✅`);
+
+  } catch (error) {
+    console.error(error);
+    mostrarEstado('Error al enviar alerta ❌');
+  }
+
+  enviando = false;
+  bloquearUI(false);
+}
 </script>
 
 </body>
