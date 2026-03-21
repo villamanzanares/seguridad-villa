@@ -6,7 +6,7 @@ const serviceAccount = require("./serviceAccountKey.json");
 const app = express();
 app.use(bodyParser.json());
 
-// 🔥 Inicializar Firebase
+// 🔥 Firebase Admin
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
@@ -38,7 +38,6 @@ app.post("/alerta", async (req, res) => {
   try {
     console.log(`🚨 Nueva alerta: ${tipo}`);
 
-    // 🔹 Obtener tokens
     const snapshot = await db.collection("tokens").get();
     const tokens = snapshot.docs.map(doc => doc.data().token);
 
@@ -48,13 +47,9 @@ app.post("/alerta", async (req, res) => {
       return res.send({ status: "sin tokens" });
     }
 
-    // 🔥 MENSAJE CORREGIDO (data + notification)
+    // 🔥 SOLO DATA (CLAVE)
     const message = {
       tokens: tokens,
-      notification: {
-        title: "🚨 ALERTA VILLA SEGURA",
-        body: `${tipo} reportado por ${nombre}`
-      },
       data: {
         tipo: tipo || "",
         nombre: nombre || "",
@@ -63,21 +58,19 @@ app.post("/alerta", async (req, res) => {
       }
     };
 
-    // 🔹 Enviar
     const response = await admin.messaging().sendMulticast(message);
 
     console.log(`✅ Enviados: ${response.successCount}`);
     console.log(`❌ Fallidos: ${response.failureCount}`);
 
-    // 🔍 Log detallado
     response.responses.forEach((r, i) => {
       if (!r.success) {
-        console.log(`❌ Token inválido: ${tokens[i]}`);
+        console.log(`❌ Error token: ${tokens[i]}`);
         console.log(r.error);
       }
     });
 
-    // 🔥 Guardar alerta para el footer en tiempo real
+    // Guardar alerta (para historial / footer opcional)
     await db.collection("alertas").add({
       tipo,
       nombre,
@@ -90,12 +83,10 @@ app.post("/alerta", async (req, res) => {
 
   } catch (e) {
     console.error("❌ Error enviando alerta:", e);
-    res.status(500).send("Error enviando alerta");
+    res.status(500).send("Error");
   }
 });
 
-// =============================
-// 🚀 Iniciar servidor
 // =============================
 const PORT = process.env.PORT || 10000;
 
