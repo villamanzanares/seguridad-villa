@@ -73,14 +73,14 @@
   </div>
 </div>
 
-<div class="footer" id="estado">Iniciando...</div>
+<div class="footer" id="estado">Inicializando sistema...</div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
-// 🔥 CONFIG FIREBASE (REEMPLAZAR)
+// 🔥 CONFIG FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
@@ -93,8 +93,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-// Registrar Service Worker
-await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+// 🧠 Registrar Service Worker SIN bloquear la app
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/firebase-messaging-sw.js')
+    .then(() => console.log("SW registrado"))
+    .catch(err => console.error("SW error:", err));
+}
 
 // 📲 Registrar token
 async function registrarToken() {
@@ -104,6 +108,7 @@ async function registrarToken() {
     });
 
     console.log("TOKEN:", token);
+
     document.getElementById('estado').innerText = "Notificaciones activas ✅";
 
     await fetch('/guardar-token', {
@@ -114,13 +119,13 @@ async function registrarToken() {
 
   } catch (error) {
     console.error("Error token:", error);
-    document.getElementById('estado').innerText = "Error notificaciones ❌";
+    document.getElementById('estado').innerText = "Error notificaciones ❌ (ver consola)";
   }
 }
 
 registrarToken();
 
-// 🚀 ENVÍO ALERTA
+// 🚀 CONTROL UI
 let enviando = false;
 
 function bloquearUI(estado) {
@@ -130,6 +135,7 @@ function bloquearUI(estado) {
   });
 }
 
+// 🚨 ENVÍO ALERTA (VERSIÓN BLINDADA)
 async function enviarAlerta(tipo) {
   if (enviando) return;
 
@@ -144,18 +150,30 @@ async function enviarAlerta(tipo) {
       body: JSON.stringify({ tipo })
     });
 
-    const data = await res.json();
+    if (!res.ok) {
+      throw new Error("Error servidor: " + res.status);
+    }
+
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {
+      console.warn("Respuesta no es JSON");
+    }
 
     document.getElementById('estado').innerText = `Alerta ${tipo} enviada ✅`;
 
   } catch (error) {
     console.error(error);
     document.getElementById('estado').innerText = "Error al enviar ❌";
+  } finally {
+    enviando = false;
+    bloquearUI(false);
   }
-
-  enviando = false;
-  bloquearUI(false);
 }
+
+// 👇 Hacer función accesible al HTML (IMPORTANTE)
+window.enviarAlerta = enviarAlerta;
 
 </script>
 
