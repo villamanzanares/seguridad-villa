@@ -1,3 +1,4 @@
+// server.js
 const express = require("express");
 const bodyParser = require("body-parser");
 const admin = require("firebase-admin");
@@ -20,7 +21,7 @@ app.post("/guardar-token", async (req, res) => {
     await db.collection("tokens").doc(token).set({ token });
     res.send({ ok: true });
   } catch (e) {
-    console.error(e);
+    console.error("Error guardando token:", e);
     res.status(500).send({ ok: false });
   }
 });
@@ -30,11 +31,11 @@ app.post("/alerta", async (req, res) => {
   const { tipo, nombre, direccion, telefono } = req.body;
 
   try {
-    // Traer tokens
+    // Traer todos los tokens
     const snapshot = await db.collection("tokens").get();
     const tokens = snapshot.docs.map(doc => doc.data().token);
 
-    // Enviar notificaciones
+    // Preparar mensaje FCM
     const message = {
       tokens,
       notification: {
@@ -44,18 +45,27 @@ app.post("/alerta", async (req, res) => {
       data: { tipo, nombre, direccion, telefono }
     };
 
-    await admin.messaging().sendMulticast(message);
+    // Enviar notificaciones
+    const response = await admin.messaging().sendMulticast(message);
 
-    // Guardar alerta en Firestore para footer
+    // Log detallado por token
+    response.responses.forEach((r, idx) => {
+      if (!r.success) console.log(`Error token: ${tokens[idx]} ->`, r.error);
+    });
+
+    // Guardar alerta en Firestore para footer en tiempo real
     await db.collection("alertas").add({
-      tipo, nombre, direccion, telefono,
+      tipo,
+      nombre,
+      direccion,
+      telefono,
       timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
 
     res.send({ status: "ok" });
 
   } catch (e) {
-    console.error(e);
+    console.error("Error enviando alerta:", e);
     res.status(500).send('Error enviando alerta');
   }
 });
