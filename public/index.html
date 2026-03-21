@@ -2,61 +2,52 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Villa Segura</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
     body {
-      margin: 0;
       font-family: Arial, sans-serif;
+      text-align: center;
       background: #0f172a;
       color: white;
-      text-align: center;
-    }
-
-    h1 {
-      padding: 15px;
       margin: 0;
-      background: #020617;
-    }
-
-    .container {
       padding: 20px;
     }
 
+    h1 {
+      margin-bottom: 20px;
+    }
+
     .botones {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+      display: flex;
+      flex-direction: column;
       gap: 15px;
     }
 
     button {
-      padding: 25px;
+      padding: 20px;
       font-size: 18px;
       border: none;
       border-radius: 12px;
-      font-weight: bold;
       cursor: pointer;
+      font-weight: bold;
     }
 
-    .emergencia { background: #dc2626; }
-    .robo { background: #ea580c; }
-    .incendio { background: #f59e0b; }
-    .asistencia { background: #2563eb; }
+    .robo { background: #ef4444; }
+    .incendio { background: #f97316; }
+    .asistencia { background: #3b82f6; }
 
-    .footer {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      background: #020617;
-      padding: 10px;
-      font-size: 14px;
+    #alertas {
+      margin-top: 30px;
       text-align: left;
     }
 
-    .bloqueado {
-      opacity: 0.5;
-      pointer-events: none;
+    .alerta {
+      background: #1e293b;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 10px;
     }
   </style>
 </head>
@@ -65,142 +56,82 @@
 
 <h1>🚨 Villa Segura</h1>
 
-<div class="container">
-  <div class="botones">
-    <button onclick="enviarAlerta('EMERGENCIA')" class="emergencia">🚨 Emergencia</button>
-    <button onclick="enviarAlerta('ROBO')" class="robo">🚔 Robo</button>
-    <button onclick="enviarAlerta('INCENDIO')" class="incendio">🔥 Incendio</button>
-    <button onclick="enviarAlerta('ASISTENCIA')" class="asistencia">🆘 Asistencia</button>
-  </div>
+<div class="botones">
+  <button class="robo" onclick="enviarAlerta('ROBO')">🚔 ROBO</button>
+  <button class="incendio" onclick="enviarAlerta('INCENDIO')">🔥 INCENDIO</button>
+  <button class="asistencia" onclick="enviarAlerta('ASISTENCIA')">🆘 ASISTENCIA</button>
 </div>
 
-<div class="footer" id="estado">Inicializando sistema...</div>
+<div id="alertas"></div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
-// Config Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-  authDomain: "alerta-rosko.firebaseapp.com",
-  projectId: "alerta-rosko",
-  storageBucket: "alerta-rosko.firebasestorage.app",
-  messagingSenderId: "1022811358317",
-  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-};
+  const firebaseConfig = {
+    apiKey: "TU_API_KEY",
+    authDomain: "TU_DOMINIO",
+    projectId: "alerta-rosko",
+    messagingSenderId: "TU_SENDER_ID",
+    appId: "TU_APP_ID"
+  };
 
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
 
-// Registrar Service Worker
-let swRegistration;
-if ('serviceWorker' in navigator) {
-  swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-  await navigator.serviceWorker.ready;
-  console.log("SW listo ✅");
-}
+  // 🔑 REGISTRAR TOKEN
+  async function registrarToken() {
+    try {
+      const token = await getToken(messaging, {
+        vapidKey: "TU_VAPID_KEY"
+      });
 
-// Registrar token
-async function registrarToken() {
-  try {
-    const token = await getToken(messaging, {
-      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-      serviceWorkerRegistration: swRegistration
-    });
+      console.log("📱 Token:", token);
 
-    if (token) {
-      console.log("Token obtenido:", token);
-      document.getElementById('estado').innerText = "Notificaciones activas ✅";
-
-      await fetch('/guardar-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("/guardar-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({ token })
       });
+
+    } catch (error) {
+      console.error("❌ Error token:", error);
     }
-
-  } catch (e) {
-    console.error(e);
-    document.getElementById('estado').innerText = "Error notificaciones ❌";
   }
-}
 
-// Pedir permiso notificaciones
-if (Notification.permission !== "granted") {
-  Notification.requestPermission().then((perm) => {
-    if (perm === 'granted') registrarToken();
-  });
-} else {
   registrarToken();
-}
 
-// Notificaciones en primer plano
-onMessage(messaging, (payload) => {
-  console.log("🔥 MENSAJE COMPLETO:", payload);
+  // 🔔 ESCUCHAR MENSAJES EN PRIMER PLANO (CLAVE 🔥)
+  onMessage(messaging, (payload) => {
+    console.log("📩 Mensaje recibido:", payload);
 
-  alert(JSON.stringify(payload));
-});
-
-// Listener Firestore para actualizar footer en tiempo real
-const q = query(collection(db, "alertas"), orderBy("timestamp", "desc"), limit(1));
-onSnapshot(q, (snapshot) => {
-  snapshot.docChanges().forEach(change => {
-    if (change.type === "added") {
-      const alerta = change.doc.data();
-      const tipo = alerta.tipo || "Alerta";
-      const nombre = alerta.nombre || "Desconocido";
-      const direccion = alerta.direccion || "-";
-      const telefono = alerta.telefono || "-";
-
-      document.getElementById("estado").innerText =
-        `🚨 ${tipo} enviada por ${nombre} (${direccion}, ${telefono})`;
-    }
+    const tipo = payload.data?.tipo || "ALERTA";
+    mostrarAlerta(tipo);
   });
-});
 
-// Funciones UI y enviar alerta
-let enviando = false;
-function bloquearUI(b) {
-  document.querySelectorAll('button').forEach(btn => {
-    btn.disabled = b;
-    btn.classList.toggle('bloqueado', b);
-  });
-}
-
-async function enviarAlerta(tipo) {
-  if (enviando) return;
-
-  enviando = true;
-  bloquearUI(true);
-  estado.innerText = "Enviando alerta...";
-
-  try {
-    // Datos del emisor (puedes poner dinámicos)
-    const nombre = "Juan Pérez";
-    const direccion = "Calle Falsa 123";
-    const telefono = "+56912345678";
-
-    const res = await fetch('/alerta', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo, nombre, direccion, telefono })
+  // 📡 ENVIAR ALERTA
+  window.enviarAlerta = async (tipo) => {
+    await fetch("/enviar-alerta", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ tipo })
     });
+  };
 
-    if (!res.ok) throw new Error();
-    estado.innerText = `Alerta ${tipo} enviada ✅`;
+  // 🧠 MOSTRAR ALERTA EN UI
+  function mostrarAlerta(tipo) {
+    const contenedor = document.getElementById("alertas");
 
-  } catch {
-    estado.innerText = "Error al enviar ❌";
-  } finally {
-    enviando = false;
-    bloquearUI(false);
+    const div = document.createElement("div");
+    div.className = "alerta";
+    div.innerHTML = `🚨 Alerta: <strong>${tipo}</strong>`;
+
+    contenedor.prepend(div);
   }
-}
-
-window.enviarAlerta = enviarAlerta;
 </script>
 
 </body>
