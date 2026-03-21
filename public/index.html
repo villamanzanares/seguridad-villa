@@ -66,10 +66,10 @@
 
 <div class="container">
   <div class="botones">
-    <button type="button" class="emergencia" onclick="enviarAlerta('EMERGENCIA')">🚨 Emergencia</button>
-    <button type="button" class="robo" onclick="enviarAlerta('ROBO')">🚔 Robo</button>
-    <button type="button" class="incendio" onclick="enviarAlerta('INCENDIO')">🔥 Incendio</button>
-    <button type="button" class="asistencia" onclick="enviarAlerta('ASISTENCIA')">🆘 Asistencia</button>
+    <button onclick="enviarAlerta('EMERGENCIA')" class="emergencia">🚨 Emergencia</button>
+    <button onclick="enviarAlerta('ROBO')" class="robo">🚔 Robo</button>
+    <button onclick="enviarAlerta('INCENDIO')" class="incendio">🔥 Incendio</button>
+    <button onclick="enviarAlerta('ASISTENCIA')" class="asistencia">🆘 Asistencia</button>
   </div>
 </div>
 
@@ -80,7 +80,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
-// 🔥 CONFIG FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
@@ -93,21 +92,17 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-// 🧠 Registrar Service Worker SIN bloquear la app
+// SW sin bloquear
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/firebase-messaging-sw.js')
-    .then(() => console.log("SW registrado"))
-    .catch(err => console.error("SW error:", err));
+  navigator.serviceWorker.register('/firebase-messaging-sw.js');
 }
 
-// 📲 Registrar token
+// Token
 async function registrarToken() {
   try {
     const token = await getToken(messaging, {
       vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
     });
-
-    console.log("TOKEN:", token);
 
     document.getElementById('estado').innerText = "Notificaciones activas ✅";
 
@@ -117,31 +112,29 @@ async function registrarToken() {
       body: JSON.stringify({ token })
     });
 
-  } catch (error) {
-    console.error("Error token:", error);
-    document.getElementById('estado').innerText = "Error notificaciones ❌ (ver consola)";
+  } catch (e) {
+    console.error(e);
+    document.getElementById('estado').innerText = "Error notificaciones ❌";
   }
 }
 
 registrarToken();
 
-// 🚀 CONTROL UI
 let enviando = false;
 
-function bloquearUI(estado) {
+function bloquearUI(b) {
   document.querySelectorAll('button').forEach(btn => {
-    btn.disabled = estado;
-    btn.classList.toggle('bloqueado', estado);
+    btn.disabled = b;
+    btn.classList.toggle('bloqueado', b);
   });
 }
 
-// 🚨 ENVÍO ALERTA (VERSIÓN BLINDADA)
 async function enviarAlerta(tipo) {
   if (enviando) return;
 
   enviando = true;
   bloquearUI(true);
-  document.getElementById('estado').innerText = "Enviando alerta...";
+  estado.innerText = "Enviando alerta...";
 
   try {
     const res = await fetch('/alerta', {
@@ -150,29 +143,18 @@ async function enviarAlerta(tipo) {
       body: JSON.stringify({ tipo })
     });
 
-    if (!res.ok) {
-      throw new Error("Error servidor: " + res.status);
-    }
+    if (!res.ok) throw new Error();
 
-    let data = {};
-    try {
-      data = await res.json();
-    } catch {
-      console.warn("Respuesta no es JSON");
-    }
+    estado.innerText = `Alerta ${tipo} enviada ✅`;
 
-    document.getElementById('estado').innerText = `Alerta ${tipo} enviada ✅`;
-
-  } catch (error) {
-    console.error(error);
-    document.getElementById('estado').innerText = "Error al enviar ❌";
+  } catch {
+    estado.innerText = "Error al enviar ❌";
   } finally {
     enviando = false;
     bloquearUI(false);
   }
 }
 
-// 👇 Hacer función accesible al HTML (IMPORTANTE)
 window.enviarAlerta = enviarAlerta;
 
 </script>
