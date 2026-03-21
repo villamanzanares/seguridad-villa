@@ -51,6 +51,7 @@
       background: #020617;
       padding: 10px;
       font-size: 14px;
+      text-align: left;
     }
 
     .bloqueado {
@@ -102,7 +103,7 @@ if ('serviceWorker' in navigator) {
   console.log("SW listo ✅");
 }
 
-// Registrar token (solo si permiso concedido)
+// Registrar token (si permiso concedido)
 async function registrarToken() {
   try {
     const token = await getToken(messaging, {
@@ -127,6 +128,7 @@ async function registrarToken() {
   }
 }
 
+// Pedir permiso solo si no concedido
 if (Notification.permission !== "granted") {
   Notification.requestPermission().then((perm) => {
     if (perm === 'granted') registrarToken();
@@ -146,14 +148,19 @@ onMessage(messaging, (payload) => {
   }
 });
 
-// Escuchar nuevas alertas en Firestore para actualizar footer
+// Listener Firestore: actualizar footer con datos completos
 const q = query(collection(db, "alertas"), orderBy("timestamp", "desc"), limit(1));
 onSnapshot(q, (snapshot) => {
   snapshot.docChanges().forEach(change => {
     if (change.type === "added") {
       const alerta = change.doc.data();
       const tipo = alerta.tipo || "Alerta";
-      document.getElementById("estado").innerText = `🚨 Nueva alerta: ${tipo}`;
+      const nombre = alerta.nombre || "Desconocido";
+      const direccion = alerta.direccion || "-";
+      const telefono = alerta.telefono || "-";
+
+      document.getElementById("estado").innerText =
+        `🚨 ${tipo} enviada por ${nombre} (${direccion}, ${telefono})`;
     }
   });
 });
@@ -175,21 +182,20 @@ async function enviarAlerta(tipo) {
   estado.innerText = "Enviando alerta...";
 
   try {
+    // Datos del emisor (ejemplo, reemplazar con info real de usuario)
+    const nombre = "Juan Pérez";
+    const direccion = "Calle Falsa 123";
+    const telefono = "+56912345678";
+
     const res = await fetch('/alerta', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tipo })
+      body: JSON.stringify({ tipo, nombre, direccion, telefono })
     });
 
     if (!res.ok) throw new Error();
 
     estado.innerText = `Alerta ${tipo} enviada ✅`;
-
-    // Guardar alerta en Firestore
-    await addDoc(collection(db, "alertas"), {
-      tipo,
-      timestamp: new Date()
-    });
 
   } catch {
     estado.innerText = "Error al enviar ❌";
