@@ -1,13 +1,12 @@
-import express from "express";
-import bodyParser from "body-parser";
-import admin from "firebase-admin";
+const express = require("express");
+const bodyParser = require("body-parser");
+const admin = require("firebase-admin");
+const serviceAccount = require("./serviceAccountKey.json");
 
 const app = express();
 app.use(bodyParser.json());
 
 // Inicializar Firebase Admin
-import serviceAccount from "./serviceAccountKey.json" assert { type: "json" };
-
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
@@ -35,7 +34,7 @@ app.post("/alerta", async (req, res) => {
     const snapshot = await db.collection("tokens").get();
     const tokens = snapshot.docs.map(doc => doc.data().token);
 
-    // Preparar mensaje FCM
+    // Enviar notificaciones
     const message = {
       tokens,
       notification: {
@@ -45,10 +44,9 @@ app.post("/alerta", async (req, res) => {
       data: { tipo, nombre, direccion, telefono }
     };
 
-    // Enviar notificaciones
     await admin.messaging().sendMulticast(message);
 
-    // Guardar alerta en Firestore para footer en tiempo real
+    // Guardar alerta en Firestore para footer
     await db.collection("alertas").add({
       tipo, nombre, direccion, telefono,
       timestamp: admin.firestore.FieldValue.serverTimestamp()
