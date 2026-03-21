@@ -1,124 +1,72 @@
-import express from 'express';
-import admin from 'firebase-admin';
+import express from "express";
+import admin from "firebase-admin";
+import cors from "cors";
 
 const app = express();
+app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
 
+// 🔥 Firebase seguro
+if (!admin.apps.length) {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 
-// 🔥 INICIALIZAR FIREBASE DESDE VARIABLE DE ENTORNO
-// Usa la variable: FIREBASE_SERVICE_ACCOUNT_JSON
-
-let serviceAccount;
-
-try {
-  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-} catch (error) {
-  console.error('❌ Error leyendo FIREBASE_SERVICE_ACCOUNT_JSON');
-  process.exit(1);
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
 }
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
 
 const db = admin.firestore();
 
-
-// 📲 GUARDAR TOKEN (sin duplicados)
-app.post('/guardar-token', async (req, res) => {
+// 📲 Guardar token
+app.post("/guardar-token", async (req, res) => {
   try {
     const { token } = req.body;
 
-    if (!token) {
-      return res.status(400).json({ error: 'Token requerido' });
-    }
+    if (!token) return res.status(400).send("No token");
 
-    const existe = await db.collection('tokens')
-      .where('token', '==', token)
-      .get();
+    await db.collection("tokens").doc(token).set({ token });
 
-    if (existe.empty) {
-      await db.collection('tokens').add({
-        token,
-        fecha: new Date()
-      });
-      console.log('📲 Token guardado');
-    } else {
-      console.log('🔁 Token ya existe');
-    }
+    res.send({ ok: true });
 
-    res.json({ ok: true });
-
-  } catch (error) {
-    console.error('❌ Error guardando token:', error);
-    res.status(500).json({ error: 'Error guardando token' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("Error guardando token");
   }
 });
 
-
-// 🚨 ENVIAR ALERTA
-app.post('/alerta', async (req, res) => {
+// 🚨 Enviar alerta
+app.post("/alerta", async (req, res) => {
   try {
-    const { tipo, lat, lng } = req.body;
+    const { tipo } = req.body;
 
-    console.log('🚨 Nueva alerta:', tipo);
+    const snapshot = await db.collection("tokens").get();
 
-    // Guardar alerta
-    const doc = await db.collection('alertas').add({
-      tipo,
-      lat: lat || null,
-      lng: lng || null,
-      fecha: new Date()
-    });
-
-    // Obtener tokens
-    const snapshot = await db.collection('tokens').get();
     const tokens = snapshot.docs.map(doc => doc.data().token);
 
-    console.log(`📡 Enviando a ${tokens.length} dispositivos`);
-
-    if (tokens.length > 0) {
-      const response = await admin.messaging().sendEachForMulticast({
-        tokens,
-        notification: {
-          title: `🚨 ${tipo}`,
-          body: `Alerta en tu comunidad`
-        },
-        data: {
-          tipo: tipo || '',
-          lat: lat ? String(lat) : '',
-          lng: lng ? String(lng) : ''
-        }
-      });
-
-      console.log('✅ Notificaciones enviadas:', response.successCount);
-
-      // 🧹 Limpiar tokens inválidos
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          const docId = snapshot.docs[idx].id;
-          db.collection('tokens').doc(docId).delete();
-          console.log('❌ Token inválido eliminado');
-        }
-      });
+    if (!tokens.length) {
+      return res.status(400).send("No hay tokens");
     }
 
-    res.json({
-      ok: true,
-      id: doc.id
-    });
+    const message = {
+      notification: {
+        title: `🚨 ${tipo}`,
+        body: "Alerta vecinal activada"
+      },
+      tokens
+    };
 
-  } catch (error) {
-    console.error('❌ Error enviando alerta:', error);
-    res.status(500).json({ error: 'Error enviando alerta' });
+    const response = await admin.messaging().sendEachForMulticast(message);
+
+    console.log("Enviados:", response.successCount);
+
+    res.send({ ok: true });
+
+  } catch (e) {
+    console.error("ERROR ALERTA:", e);
+    res.status(500).send("Error enviando alerta");
   }
 });
 
-
-// 🟢 SERVIDOR
-const PORT = process.env.PORT || 8080;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+app.listen(8080, () => {
+  console.log("Servidor corriendo en puerto 8080");
 });
