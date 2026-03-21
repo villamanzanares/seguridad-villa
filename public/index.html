@@ -93,8 +93,12 @@ const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
 // SW sin bloquear
+let swRegistration;
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/firebase-messaging-sw.js');
+  swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+  await navigator.serviceWorker.ready;
+  console.log("SW listo ✅");
 }
 
 // Token
