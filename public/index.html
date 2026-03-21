@@ -78,7 +78,7 @@
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
@@ -92,7 +92,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-// SW sin bloquear
 let swRegistration;
 
 if ('serviceWorker' in navigator) {
@@ -101,13 +100,13 @@ if ('serviceWorker' in navigator) {
   console.log("SW listo ✅");
 }
 
-// Token
+// Registrar token y enviar al backend
 async function registrarToken() {
   try {
     const token = await getToken(messaging, {
       vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
       serviceWorkerRegistration: swRegistration
-});
+    });
 
     document.getElementById('estado').innerText = "Notificaciones activas ✅";
 
@@ -123,7 +122,21 @@ async function registrarToken() {
   }
 }
 
-registrarToken();
+// Pedir permiso y registrar token
+Notification.requestPermission().then((perm) => {
+  if (perm === 'granted') registrarToken();
+});
+
+// Manejar notificaciones cuando la app está en foreground
+onMessage(messaging, (payload) => {
+  console.log('Mensaje recibido en foreground', payload);
+  if (payload.notification) {
+    new Notification(payload.notification.title, {
+      body: payload.notification.body,
+      icon: '/icon.png'
+    });
+  }
+});
 
 let enviando = false;
 
