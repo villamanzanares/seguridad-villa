@@ -139,13 +139,9 @@ if (Notification.permission !== "granted") {
 
 // Notificaciones en primer plano
 onMessage(messaging, (payload) => {
-  console.log('Mensaje recibido en foreground', payload);
-  if (payload.notification) {
-    new Notification(payload.notification.title, {
-      body: payload.notification.body,
-      icon: '/icon.png'
-    });
-  }
+  console.log("🔥 MENSAJE COMPLETO:", payload);
+
+  alert(JSON.stringify(payload));
 });
 
 // Listener Firestore para actualizar footer en tiempo real
