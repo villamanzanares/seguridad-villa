@@ -76,7 +76,6 @@
 <div class="footer" id="estado">Inicializando sistema...</div>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
@@ -100,7 +99,7 @@ if ('serviceWorker' in navigator) {
   console.log("SW listo ✅");
 }
 
-// Registrar token y enviar al backend
+// Registrar token si aún no existe en este navegador
 async function registrarToken() {
   try {
     const token = await getToken(messaging, {
@@ -108,13 +107,16 @@ async function registrarToken() {
       serviceWorkerRegistration: swRegistration
     });
 
-    document.getElementById('estado').innerText = "Notificaciones activas ✅";
+    if (token) {
+      console.log("Token obtenido:", token);
+      document.getElementById('estado').innerText = "Notificaciones activas ✅";
 
-    await fetch('/guardar-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
-    });
+      await fetch('/guardar-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+    }
 
   } catch (e) {
     console.error(e);
@@ -122,12 +124,16 @@ async function registrarToken() {
   }
 }
 
-// Pedir permiso y registrar token
-Notification.requestPermission().then((perm) => {
-  if (perm === 'granted') registrarToken();
-});
+// Solo pedir permiso si no está concedido
+if (Notification.permission !== "granted") {
+  Notification.requestPermission().then((perm) => {
+    if (perm === 'granted') registrarToken();
+  });
+} else {
+  registrarToken();
+}
 
-// Manejar notificaciones cuando la app está en foreground
+// Recibir notificaciones en foreground
 onMessage(messaging, (payload) => {
   console.log('Mensaje recibido en foreground', payload);
   if (payload.notification) {
@@ -174,7 +180,6 @@ async function enviarAlerta(tipo) {
 }
 
 window.enviarAlerta = enviarAlerta;
-
 </script>
 
 </body>
