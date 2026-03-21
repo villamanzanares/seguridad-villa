@@ -78,7 +78,9 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+// Config Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
@@ -90,16 +92,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
+const db = getFirestore(app);
 
+// Service Worker
 let swRegistration;
-
 if ('serviceWorker' in navigator) {
   swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
   await navigator.serviceWorker.ready;
   console.log("SW listo ✅");
 }
 
-// Registrar token si aún no existe en este navegador
+// Registrar token (solo si permiso concedido)
 async function registrarToken() {
   try {
     const token = await getToken(messaging, {
@@ -124,7 +127,6 @@ async function registrarToken() {
   }
 }
 
-// Solo pedir permiso si no está concedido
 if (Notification.permission !== "granted") {
   Notification.requestPermission().then((perm) => {
     if (perm === 'granted') registrarToken();
@@ -133,7 +135,7 @@ if (Notification.permission !== "granted") {
   registrarToken();
 }
 
-// Recibir notificaciones en foreground
+// Foreground notifications
 onMessage(messaging, (payload) => {
   console.log('Mensaje recibido en foreground', payload);
   if (payload.notification) {
@@ -144,8 +146,20 @@ onMessage(messaging, (payload) => {
   }
 });
 
-let enviando = false;
+// Escuchar nuevas alertas en Firestore para actualizar footer
+const q = query(collection(db, "alertas"), orderBy("timestamp", "desc"), limit(1));
+onSnapshot(q, (snapshot) => {
+  snapshot.docChanges().forEach(change => {
+    if (change.type === "added") {
+      const alerta = change.doc.data();
+      const tipo = alerta.tipo || "Alerta";
+      document.getElementById("estado").innerText = `🚨 Nueva alerta: ${tipo}`;
+    }
+  });
+});
 
+// Enviar alerta
+let enviando = false;
 function bloquearUI(b) {
   document.querySelectorAll('button').forEach(btn => {
     btn.disabled = b;
@@ -171,6 +185,12 @@ async function enviarAlerta(tipo) {
 
     estado.innerText = `Alerta ${tipo} enviada ✅`;
 
+    // Guardar alerta en Firestore
+    await addDoc(collection(db, "alertas"), {
+      tipo,
+      timestamp: new Date()
+    });
+
   } catch {
     estado.innerText = "Error al enviar ❌";
   } finally {
@@ -180,6 +200,7 @@ async function enviarAlerta(tipo) {
 }
 
 window.enviarAlerta = enviarAlerta;
+
 </script>
 
 </body>
