@@ -1,78 +1,64 @@
 import express from 'express';
 import admin from 'firebase-admin';
-import cors from 'cors';
+import bodyParser from 'body-parser';
+import serviceAccount from './serviceAccountKey.json' assert { type: "json" };
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-
-// 🔥 Servir frontend
-app.use(express.static('public'));
-
-// 🔥 Firebase
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+app.use(bodyParser.json());
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 
-// 🧠 Base de datos temporal (memoria)
-let tokens = [];
+const db = admin.firestore();
 
-// 📲 GUARDAR TOKEN
-app.post('/guardar-token', (req, res) => {
+app.post('/guardar-token', async (req, res) => {
   const { token } = req.body;
+  if (!token) return res.status(400).send("Falta token");
 
-  if (!token) {
-    return res.status(400).json({ error: 'Token requerido' });
+  try {
+    await db.collection('tokens').doc(token).set({ token });
+    console.log(`✅ Token guardado: ${token}`);
+    res.send('Token guardado');
+  } catch (e) {
+    console.error(e);
+    res.status(500).send('Error guardando token');
   }
-
-  if (!tokens.includes(token)) {
-    tokens.push(token);
-    console.log('✅ Token guardado:', token);
-  }
-
-  res.json({ success: true });
 });
 
-// 🚨 ENVIAR ALERTA
 app.post('/alerta', async (req, res) => {
+  const { tipo } = req.body;
+
   try {
-    const { tipo } = req.body;
+    const snapshot = await db.collection('tokens').get();
+    const tokens = snapshot.docs.map(doc => doc.data().token);
 
-    if (tokens.length === 0) {
-      return res.status(400).json({ error: 'No hay dispositivos registrados' });
-    }
-
-    console.log(`🚨 Nueva alerta: ${tipo}`);
-    console.log(`📡 Enviando a ${tokens.length} dispositivos`);
+    if (!tokens.length) return res.status(400).send('No hay tokens');
 
     const message = {
+      tokens,
       notification: {
-        title: `🚨 ${tipo}`,
-        body: `Alerta de ${tipo} en tu comunidad`
+        title: `🚨 ALERTA VILLA SEGURA`,
+        body: `${tipo} reportado`
       },
-      tokens: tokens
+      data: {
+        tipo
+      }
     };
 
-    const response = await admin.messaging().sendEachForMulticast(message);
+    const response = await admin.messaging().sendMulticast(message);
 
+    console.log(`📡 Enviando a ${tokens.length} dispositivos`);
     console.log(`✅ Enviados: ${response.successCount}`);
     console.log(`❌ Fallidos: ${response.failureCount}`);
 
-    res.json({
-      success: true,
-      enviados: response.successCount
-    });
-
-  } catch (error) {
-    console.error('❌ Error enviando alerta:', error);
-    res.status(500).json({ error: 'Error enviando alerta' });
+    res.send({ sent: response.successCount, failed: response.failureCount });
+  } catch (e) {
+    console.error(e);
+    res.status(500).send('Error enviando alerta');
   }
 });
 
-// 🚀 iniciar
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+app.listen(10000, () => {
+  console.log('🚀 Servidor corriendo en puerto 10000');
 });
