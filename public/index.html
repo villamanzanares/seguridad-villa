@@ -103,7 +103,7 @@ if ('serviceWorker' in navigator) {
   console.log("SW listo ✅");
 }
 
-// Registrar token (si permiso concedido)
+// Registrar token
 async function registrarToken() {
   try {
     const token = await getToken(messaging, {
@@ -128,7 +128,6 @@ async function registrarToken() {
   }
 }
 
-// Pedir permiso solo si no concedido
 if (Notification.permission !== "granted") {
   Notification.requestPermission().then((perm) => {
     if (perm === 'granted') registrarToken();
@@ -148,7 +147,7 @@ onMessage(messaging, (payload) => {
   }
 });
 
-// Listener Firestore: actualizar footer con datos completos
+// Listener Firestore para footer en tiempo real
 const q = query(collection(db, "alertas"), orderBy("timestamp", "desc"), limit(1));
 onSnapshot(q, (snapshot) => {
   snapshot.docChanges().forEach(change => {
@@ -182,7 +181,6 @@ async function enviarAlerta(tipo) {
   estado.innerText = "Enviando alerta...";
 
   try {
-    // Datos del emisor (ejemplo, reemplazar con info real de usuario)
     const nombre = "Juan Pérez";
     const direccion = "Calle Falsa 123";
     const telefono = "+56912345678";
@@ -194,7 +192,6 @@ async function enviarAlerta(tipo) {
     });
 
     if (!res.ok) throw new Error();
-
     estado.innerText = `Alerta ${tipo} enviada ✅`;
 
   } catch {
