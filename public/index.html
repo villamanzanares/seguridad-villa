@@ -95,7 +95,7 @@ const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 const db = getFirestore(app);
 
-// Service Worker
+// Registrar Service Worker
 let swRegistration;
 if ('serviceWorker' in navigator) {
   swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
@@ -128,6 +128,7 @@ async function registrarToken() {
   }
 }
 
+// Pedir permiso notificaciones
 if (Notification.permission !== "granted") {
   Notification.requestPermission().then((perm) => {
     if (perm === 'granted') registrarToken();
@@ -136,7 +137,7 @@ if (Notification.permission !== "granted") {
   registrarToken();
 }
 
-// Foreground notifications
+// Notificaciones en primer plano
 onMessage(messaging, (payload) => {
   console.log('Mensaje recibido en foreground', payload);
   if (payload.notification) {
@@ -147,7 +148,7 @@ onMessage(messaging, (payload) => {
   }
 });
 
-// Listener Firestore para footer en tiempo real
+// Listener Firestore para actualizar footer en tiempo real
 const q = query(collection(db, "alertas"), orderBy("timestamp", "desc"), limit(1));
 onSnapshot(q, (snapshot) => {
   snapshot.docChanges().forEach(change => {
@@ -164,7 +165,7 @@ onSnapshot(q, (snapshot) => {
   });
 });
 
-// Enviar alerta
+// Funciones UI y enviar alerta
 let enviando = false;
 function bloquearUI(b) {
   document.querySelectorAll('button').forEach(btn => {
@@ -181,6 +182,7 @@ async function enviarAlerta(tipo) {
   estado.innerText = "Enviando alerta...";
 
   try {
+    // Datos del emisor (puedes poner dinámicos)
     const nombre = "Juan Pérez";
     const direccion = "Calle Falsa 123";
     const telefono = "+56912345678";
@@ -203,7 +205,6 @@ async function enviarAlerta(tipo) {
 }
 
 window.enviarAlerta = enviarAlerta;
-
 </script>
 
 </body>
