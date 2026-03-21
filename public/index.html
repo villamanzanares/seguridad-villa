@@ -17,7 +17,6 @@
     h1 {
       padding: 15px;
       margin: 0;
-      font-size: 22px;
       background: #020617;
     }
 
@@ -29,7 +28,6 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 15px;
-      margin-top: 20px;
     }
 
     button {
@@ -37,13 +35,8 @@
       font-size: 18px;
       border: none;
       border-radius: 12px;
-      cursor: pointer;
       font-weight: bold;
-      transition: 0.2s;
-    }
-
-    button:active {
-      transform: scale(0.97);
+      cursor: pointer;
     }
 
     .emergencia { background: #dc2626; }
@@ -69,96 +62,101 @@
 
 <body>
 
-  <h1>🚨 Villa Segura</h1>
+<h1>🚨 Villa Segura</h1>
 
-  <div class="container">
-
-    <div class="botones">
-      <button type="button" class="emergencia" onclick="enviarAlerta('EMERGENCIA')">🚨 Emergencia</button>
-      <button type="button" class="robo" onclick="enviarAlerta('ROBO')">🚔 Robo</button>
-      <button type="button" class="incendio" onclick="enviarAlerta('INCENDIO')">🔥 Incendio</button>
-      <button type="button" class="asistencia" onclick="enviarAlerta('ASISTENCIA')">🆘 Asistencia</button>
-    </div>
-
+<div class="container">
+  <div class="botones">
+    <button type="button" class="emergencia" onclick="enviarAlerta('EMERGENCIA')">🚨 Emergencia</button>
+    <button type="button" class="robo" onclick="enviarAlerta('ROBO')">🚔 Robo</button>
+    <button type="button" class="incendio" onclick="enviarAlerta('INCENDIO')">🔥 Incendio</button>
+    <button type="button" class="asistencia" onclick="enviarAlerta('ASISTENCIA')">🆘 Asistencia</button>
   </div>
+</div>
 
-  <div class="footer" id="estado">
-    Listo para enviar alertas
-  </div>
+<div class="footer" id="estado">Iniciando...</div>
 
-<script>
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+
+// 🔥 CONFIG FIREBASE (REEMPLAZAR)
+const firebaseConfig = {
+  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+  authDomain: "alerta-rosko.firebaseapp.com",
+  projectId: "alerta-rosko",
+  storageBucket: "alerta-rosko.firebasestorage.app",
+  messagingSenderId: "1022811358317",
+  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+};
+
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+
+// Registrar Service Worker
+await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+
+// 📲 Registrar token
+async function registrarToken() {
+  try {
+    const token = await getToken(messaging, {
+      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
+    });
+
+    console.log("TOKEN:", token);
+    document.getElementById('estado').innerText = "Notificaciones activas ✅";
+
+    await fetch('/guardar-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+
+  } catch (error) {
+    console.error("Error token:", error);
+    document.getElementById('estado').innerText = "Error notificaciones ❌";
+  }
+}
+
+registrarToken();
+
+// 🚀 ENVÍO ALERTA
 let enviando = false;
 
-// 🔒 Bloquea/desbloquea UI
 function bloquearUI(estado) {
-  const botones = document.querySelectorAll('button');
-  botones.forEach(btn => {
+  document.querySelectorAll('button').forEach(btn => {
     btn.disabled = estado;
     btn.classList.toggle('bloqueado', estado);
   });
 }
 
-// 📢 Mensajes en footer
-function mostrarEstado(msg) {
-  document.getElementById('estado').innerText = msg;
-}
-
-// 📍 Obtener ubicación
-function obtenerUbicacion() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject('GPS no soportado');
-    } else {
-      navigator.geolocation.getCurrentPosition(
-        pos => resolve({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude
-        }),
-        err => reject(err)
-      );
-    }
-  });
-}
-
-// 🚀 Enviar alerta (ANTI FREEZE)
 async function enviarAlerta(tipo) {
   if (enviando) return;
 
   enviando = true;
   bloquearUI(true);
-  mostrarEstado('Enviando alerta...');
+  document.getElementById('estado').innerText = "Enviando alerta...";
 
   try {
-    let ubicacion = { lat: null, lng: null };
-
-    try {
-      ubicacion = await obtenerUbicacion();
-    } catch (e) {
-      console.warn('Sin GPS');
-    }
-
     const res = await fetch('/alerta', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tipo,
-        lat: ubicacion.lat,
-        lng: ubicacion.lng
-      })
+      body: JSON.stringify({ tipo })
     });
 
     const data = await res.json();
 
-    mostrarEstado(`Alerta ${tipo} enviada ✅`);
+    document.getElementById('estado').innerText = `Alerta ${tipo} enviada ✅`;
 
   } catch (error) {
     console.error(error);
-    mostrarEstado('Error al enviar alerta ❌');
+    document.getElementById('estado').innerText = "Error al enviar ❌";
   }
 
   enviando = false;
   bloquearUI(false);
 }
+
 </script>
 
 </body>
