@@ -30,7 +30,6 @@ self.addEventListener("push", function(event) {
   );
 });
 
-// Enviar datos al cliente al abrir la notificación
 self.addEventListener("notificationclick", function(event) {
   event.notification.close();
   event.waitUntil(
