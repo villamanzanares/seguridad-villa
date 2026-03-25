@@ -171,10 +171,16 @@ onSnapshot(q, (snapshot) => {
     `;
 
     // 🔊 SONIDO CUANDO CAMBIA ALERTA
+    sirena.muted = false;
     sirena.currentTime = 0;
-    sirena.play().catch(()=>{});
+
+const playPromise = sirena.play();
+
+if (playPromise !== undefined) {
+  playPromise.catch(() => {
+    console.log("🔇 Autoplay bloqueado por el navegador");
   });
-});
+}
 
 // 📩 PUSH EN PRIMER PLANO
 onMessage(messaging, (payload) => {
