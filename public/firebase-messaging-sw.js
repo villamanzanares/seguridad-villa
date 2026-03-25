@@ -1,7 +1,6 @@
 importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging-compat.js");
 
-// Config Firebase
 firebase.initializeApp({
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
@@ -13,12 +12,10 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// PUSH RECIBIDO (APP cerrada o en 2º plano)
-self.addEventListener("push", function(event){
-  if(!event.data) return;
+self.addEventListener("push", function(event) {
+  if (!event.data) return;
   const data = event.data.json();
-
-  const titulo = data.notification?.title || "🚨 Villa Segura";
+  const titulo = data.notification?.title || "🚨 ALERTA";
   const cuerpo = data.notification?.body || "Nueva alerta vecinal";
 
   event.waitUntil(
@@ -28,24 +25,23 @@ self.addEventListener("push", function(event){
       badge: "/icon.png",
       vibrate: [300,100,300,100,500],
       requireInteraction: true,
-      data
+      data: data
     })
   );
 });
 
-// CLICK EN NOTIFICACION
-self.addEventListener("notificationclick", function(event){
+// Enviar datos al cliente al abrir la notificación
+self.addEventListener("notificationclick", function(event) {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({type:"window", includeUncontrolled:true}).then(clientsList=>{
-      for(const client of clientsList){
-        if(client.url.includes("/") && "focus" in client) return client.focus();
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if ("focus" in client) {
+          client.postMessage(event.notification.data);
+          return client.focus();
+        }
       }
       return clients.openWindow("/");
     })
   );
 });
-
-// INSTALACION Y ACTIVACION
-self.addEventListener("install", e=>{ console.log("SW install", Date.now()); self.skipWaiting(); });
-self.addEventListener("activate", e=>{ console.log("SW activate", Date.now()); self.clients.claim(); });
