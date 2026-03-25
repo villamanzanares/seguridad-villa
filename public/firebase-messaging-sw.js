@@ -1,17 +1,17 @@
-// Versión para control instantáneo de actualizaciones
-const VERSION = "v1.0.3";
+// firebase-messaging-sw.js
+
+const VERSION = Date.now(); // cambia cada deploy
 
 self.addEventListener("install", (event) => {
   console.log(`SW install ${VERSION}`);
-  self.skipWaiting(); // ⚡ Activa inmediatamente
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   console.log(`SW activate ${VERSION}`);
-  clients.claim(); // ⚡ Toma control de todas las pestañas
+  clients.claim();
 });
 
-// Firebase compat
 importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging-compat.js");
 
@@ -26,7 +26,6 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Push notification handler
 self.addEventListener("push", (event) => {
   if (!event.data) return;
   const data = event.data.json();
