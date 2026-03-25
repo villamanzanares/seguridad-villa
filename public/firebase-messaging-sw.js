@@ -1,3 +1,17 @@
+// Versión para control instantáneo de actualizaciones
+const VERSION = "v1.0.3";
+
+self.addEventListener("install", (event) => {
+  console.log(`SW install ${VERSION}`);
+  self.skipWaiting(); // ⚡ Activa inmediatamente
+});
+
+self.addEventListener("activate", (event) => {
+  console.log(`SW activate ${VERSION}`);
+  clients.claim(); // ⚡ Toma control de todas las pestañas
+});
+
+// Firebase compat
 importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging-compat.js");
 
@@ -12,31 +26,30 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// 💥 Notificaciones en segundo plano
-messaging.onBackgroundMessage((payload) => {
-  console.log("[SW] Mensaje recibido:", payload);
+// Push notification handler
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+  const data = event.data.json();
+  const titulo = data.notification?.title || "🚨 ALERTIA";
+  const cuerpo = data.notification?.body || "Nueva alerta vecinal";
 
-  const title = payload.notification?.title || "🚨 ALERTA";
-  const body = payload.notification?.body || "Nueva alerta vecinal";
-
-  self.registration.showNotification(title, {
-    body,
-    icon: "/icon.png",
-    badge: "/icon.png",
-    vibrate: [300, 100, 300, 100, 500],
-    requireInteraction: true,
-    data: payload.data
-  });
+  event.waitUntil(
+    self.registration.showNotification(titulo, {
+      body: cuerpo,
+      icon: "/icon.png",
+      badge: "/icon.png",
+      vibrate: [300,100,300,100,500],
+      requireInteraction: true,
+      data: data
+    })
+  );
 });
 
-// 👆 Click en notificación
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then(clientList => {
-      for (const client of clientList) {
-        if (client.url.includes("/") && "focus" in client) return client.focus();
-      }
+    clients.matchAll({ type:"window", includeUncontrolled:true }).then(clientList => {
+      for (const client of clientList) { if (client.url.includes("/") && "focus" in client) return client.focus(); }
       return clients.openWindow("/");
     })
   );
