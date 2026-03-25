@@ -7,55 +7,73 @@ const app = express();
 app.use(express.json());
 
 // ===============================
-// 🔥 CONFIGURAR FIREBASE
+// 🔥 FIREBASE
 // ===============================
 let serviceAccount;
 
 try {
   serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 } catch (error) {
-  console.error("❌ Error parseando FIREBASE_SERVICE_ACCOUNT_JSON:", error);
+  console.error("❌ Error parseando JSON:", error);
 }
 
 if (!admin.apps.length && serviceAccount) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
-  console.log("🔥 Firebase inicializado");
-} else {
-  console.log("⚠️ Firebase NO inicializado");
+  console.log("🔥 Firebase OK");
 }
 
 // ===============================
-// 📁 RUTAS Y FRONTEND
+// 🧠 MEMORIA DE TOKENS
+// ===============================
+let tokens = [];
+
+// ===============================
+// 📁 FRONTEND
 // ===============================
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// carpeta public
 app.use(express.static(path.join(__dirname, "public")));
 
-// ruta raíz
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
 // ===============================
-// 🚨 ENDPOINT DE ALERTA
+// 💾 GUARDAR TOKEN
+// ===============================
+app.post("/guardar-token", (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: "Token requerido" });
+  }
+
+  if (!tokens.includes(token)) {
+    tokens.push(token);
+    console.log("📱 Token guardado:", token);
+  }
+
+  res.json({ ok: true });
+});
+
+// ===============================
+// 🚨 ENVIAR ALERTA A TODOS
 // ===============================
 app.post("/enviar-alerta", async (req, res) => {
   try {
-    const { token, titulo, nombre, telefono, ubicacion } = req.body;
+    const { titulo, nombre, telefono, ubicacion } = req.body;
 
-    if (!token) {
-      return res.status(400).json({ error: "Falta token" });
+    if (tokens.length === 0) {
+      return res.status(400).json({ error: "No hay dispositivos registrados" });
     }
 
     const mensaje = {
-      token: token,
       notification: {
-        title: titulo || "🚨 Alerta",
-        body: `${nombre || "Vecino"} - ${ubicacion || "Ubicación desconocida"}`,
+        title: titulo || "🚨 ALERTIA",
+        body: `${nombre || "Vecino"} - ${ubicacion || "Ubicación"}`,
       },
       data: {
         nombre: nombre || "",
@@ -63,24 +81,23 @@ app.post("/enviar-alerta", async (req, res) => {
         ubicacion: ubicacion || "",
         sonido: "sirena",
       },
+      tokens: tokens, // 🔥 ENVÍA A TODOS
     };
 
-    const response = await admin.messaging().send(mensaje);
+    const response = await admin.messaging().sendEachForMulticast(mensaje);
 
-    console.log("✅ Alerta enviada:", response);
-    res.json({ ok: true, response });
+    console.log("✅ Alertas enviadas:", response.successCount);
+    res.json({ ok: true });
 
   } catch (error) {
-    console.error("❌ Error enviando alerta:", error);
+    console.error("❌ Error:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // ===============================
-// 🚀 INICIAR SERVIDOR
-// ===============================
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log(`🚀 Servidor en puerto ${PORT}`);
 });
