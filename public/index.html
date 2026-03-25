@@ -20,6 +20,8 @@
       display: flex;
       flex-direction: column;
       gap: 15px;
+      max-width: 300px;
+      margin: 0 auto 30px;
     }
 
     button {
@@ -28,12 +30,27 @@
       border-radius: 12px;
       border: none;
       cursor: pointer;
+      font-weight: bold;
     }
 
     .rojo { background: #dc2626; }
     .azul { background: #2563eb; }
     .verde { background: #16a34a; }
-    .gris { background: #6b7280; }
+    .naranja { background: #f97316; }
+
+    footer {
+      margin-top: 40px;
+      padding: 20px;
+      border-top: 2px solid #374151;
+      text-align: center;
+      background: #1e293b;
+      border-radius: 12px;
+    }
+
+    footer div { margin: 6px 0; font-size: 16px; }
+    footer .tipo { font-weight: bold; font-size: 18px; color: #facc15; }
+    footer .nombre { font-weight: bold; color: #34d399; }
+    footer .direccion, footer .telefono { color: #60a5fa; }
   </style>
 </head>
 
@@ -41,11 +58,18 @@
 <h1>🚨 Villa Segura</h1>
 
 <div class="botones">
-  <button class="rojo" onclick="enviarAlerta('emergencia')">🚨 Emergencia</button>
-  <button class="azul" onclick="enviarAlerta('sospechoso')">👀 Sospechoso</button>
-  <button class="verde" onclick="enviarAlerta('info')">ℹ️ Información</button>
-  <button class="gris" onclick="enviarAlerta('test', 'TestDevice')">🧪 Test flujo notificaciones</button>
+  <button class="rojo" onclick="enviarAlerta('emergencia', 'Dispositivo1')">🚨 Emergencia</button>
+  <button class="azul" onclick="enviarAlerta('seguridad', 'Dispositivo1')">🛡 Seguridad</button>
+  <button class="verde" onclick="enviarAlerta('ambulancia', 'Dispositivo1')">🚑 Ambulancia</button>
+  <button class="naranja" onclick="enviarAlerta('bomberos', 'Dispositivo1')">🔥 Bomberos</button>
 </div>
+
+<footer id="footer-info">
+  <div class="tipo">Tipo de Emergencia: -</div>
+  <div class="nombre">Nombre: -</div>
+  <div class="direccion">Dirección: -</div>
+  <div class="telefono">Teléfono: -</div>
+</footer>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -101,6 +125,13 @@
 
       const data = await res.json();
       console.log("📡 Respuesta alerta:", data);
+
+      // Actualizar footer con datos (simulados o enviados desde backend)
+      const footer = document.getElementById("footer-info");
+      footer.querySelector(".tipo").textContent = `Tipo de Emergencia: ${tipo}`;
+      footer.querySelector(".nombre").textContent = `Nombre: ${dispositivo}`;
+      footer.querySelector(".direccion").textContent = `Dirección: Calle Falsa 123`;
+      footer.querySelector(".telefono").textContent = `Teléfono: +56 9 1234 5678`;
 
     } catch (error) { console.error("❌ Error enviando alerta:", error); }
   };
