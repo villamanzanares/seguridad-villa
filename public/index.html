@@ -9,22 +9,10 @@
   <link rel="icon" href="/favicon.png" type="image/png">
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: white;
-      text-align: center;
-      padding: 20px;
-    }
+    body { font-family: Arial, sans-serif; background: #0f172a; color: white; text-align: center; padding: 20px; }
     h1 { margin-bottom: 30px; }
     .botones { display: flex; flex-direction: column; gap: 15px; }
-    button {
-      padding: 20px;
-      font-size: 18px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-    }
+    button { padding: 20px; font-size: 18px; border-radius: 12px; border: none; cursor: pointer; }
     .rojo { background: #dc2626; }
     .azul { background: #2563eb; }
     .verde { background: #16a34a; }
@@ -41,7 +29,6 @@
   <button class="verde" onclick="enviarAlerta('info')">ℹ️ Información</button>
 </div>
 
-<!-- Botón test flujo -->
 <button class="amarillo" id="btn-test-flujo">🧪 Test flujo notificaciones</button>
 
 <script type="module">
@@ -61,43 +48,31 @@ const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
 // ---------------------
-// INIT: SW + Token
+// INIT: SW + Token con versionado
 // ---------------------
+const SW_VERSION = "v1.0.3";
+
 async function init() {
   try {
-    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?v=${SW_VERSION}`);
     console.log("✅ Service Worker registrado");
 
-    // Espera que SW esté activo
     await navigator.serviceWorker.ready;
 
     const permiso = await Notification.requestPermission();
-    if (permiso !== "granted") {
-      console.log("🔇 Notificaciones bloqueadas");
-      return;
-    }
+    if (permiso !== "granted") { console.log("🔇 Notificaciones bloqueadas"); return; }
 
     const token = await getToken(messaging, {
       vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
       serviceWorkerRegistration: registration
     });
 
-    if (!token) {
-      console.log("❌ Token no generado");
-      return;
-    }
-
+    if (!token) { console.log("❌ Token no generado"); return; }
     console.log("📱 TOKEN:", token);
 
-    await fetch("/guardar-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token })
-    });
+    await fetch("/guardar-token", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ token }) });
 
-  } catch (error) {
-    console.error("❌ Error init:", error);
-  }
+  } catch (error) { console.error("❌ Error init:", error); }
 }
 
 init();
@@ -106,85 +81,45 @@ init();
 // Enviar alerta normal
 // ---------------------
 window.enviarAlerta = async (tipo) => {
-  const titulos = {
-    emergencia: "🚨 Emergencia",
-    sospechoso: "👀 Sospechoso",
-    info: "ℹ️ Información"
-  };
-
+  const titulos = { emergencia:"🚨 Emergencia", sospechoso:"👀 Sospechoso", info:"ℹ️ Información" };
   try {
     const res = await fetch("/enviar-alerta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        titulo: titulos[tipo] || "🚨 Alerta",
-        nombre: "Vecino",
-        ubicacion: "Ubicación"
-      })
+      body: JSON.stringify({ titulo: titulos[tipo] || "🚨 Alerta", nombre:"Vecino", ubicacion:"Ubicación" })
     });
-
     const data = await res.json();
     console.log("📡 RESPUESTA:", data);
-
-  } catch (error) {
-    console.error("❌ Error enviando alerta:", error);
-  }
+  } catch (error) { console.error("❌ Error enviando alerta:", error); }
 };
 
 // ---------------------
 // BOTÓN TEST FLUJO
 // ---------------------
 async function testFlow() {
-  if (!('serviceWorker' in navigator)) return alert("❌ SW no soportado");
-
   try {
-    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-    console.log("✅ SW registrado para test");
-
+    const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?v=${SW_VERSION}`);
     await navigator.serviceWorker.ready;
 
     const permiso = await Notification.requestPermission();
-    if (permiso !== "granted") return alert("🔇 Permiso de notificaciones no concedido");
+    if (permiso !== "granted") return alert("🔇 Permiso no concedido");
 
-    const token = await getToken(messaging, {
-      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-      serviceWorkerRegistration: registration
-    });
-
+    const token = await getToken(messaging, { vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw", serviceWorkerRegistration: registration });
     if (!token) return alert("❌ Token no generado");
 
     console.log("📱 Token test:", token);
-
-    await fetch("/guardar-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token })
-    });
+    await fetch("/guardar-token", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ token }) });
 
     alert("✅ Token generado y guardado correctamente");
 
-    const res = await fetch("/enviar-alerta", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        titulo: "🧪 Test alerta",
-        nombre: "Vecino Test",
-        ubicacion: "Tu ubicación"
-      })
-    });
-
+    const res = await fetch("/enviar-alerta", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify({ titulo:"🧪 Test alerta", nombre:"Vecino Test", ubicacion:"Tu ubicación" }) });
     const data = await res.json();
     console.log("📡 Respuesta alerta test:", data);
 
     alert("✅ Alerta de prueba enviada. Revisa tu dispositivo.");
-
-  } catch (err) {
-    console.error(err);
-    alert("❌ Error en test: " + err.message);
-  }
+  } catch (err) { console.error(err); alert("❌ Error en test: "+err.message); }
 }
 
-// Listener del botón test
 document.getElementById("btn-test-flujo").addEventListener("click", testFlow);
 </script>
 
