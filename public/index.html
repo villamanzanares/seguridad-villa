@@ -42,6 +42,11 @@
   <button class="verde" onclick="enviarAlerta('info')">ℹ️ Información</button>
 </div>
 
+<!-- Botón test flujo -->
+<button style="margin-top:20px; padding:15px; font-size:16px; border-radius:8px; background:#facc15; color:#000;" onclick="testFlow()">
+  🧪 Test flujo notificaciones
+</button>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
@@ -58,20 +63,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
+// ---------------------
+// INIT: SW + Token
+// ---------------------
 async function init() {
   try {
-    // 1️⃣ Registrar Service Worker
     const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
     console.log("✅ Service Worker registrado");
 
-    // 2️⃣ Pedir permiso
     const permiso = await Notification.requestPermission();
     if (permiso !== "granted") {
       console.log("🔇 Notificaciones bloqueadas");
       return;
     }
 
-    // 3️⃣ Obtener token
     const token = await getToken(messaging, {
       vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
       serviceWorkerRegistration: registration
@@ -84,7 +89,6 @@ async function init() {
 
     console.log("📱 TOKEN:", token);
 
-    // 4️⃣ Guardar token en backend (FireStore)
     await fetch("/guardar-token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -98,9 +102,10 @@ async function init() {
 
 init();
 
-// Enviar alerta
+// ---------------------
+// Enviar alerta normal
+// ---------------------
 window.enviarAlerta = async (tipo) => {
-  // Mapear tipo a mensaje por defecto
   const titulos = {
     emergencia: "🚨 Emergencia",
     sospechoso: "👀 Sospechoso",
@@ -125,6 +130,57 @@ window.enviarAlerta = async (tipo) => {
     console.error("❌ Error enviando alerta:", error);
   }
 };
+
+// ---------------------
+// BOTÓN TEST FLUJO
+// ---------------------
+async function testFlow() {
+  if (!('serviceWorker' in navigator)) return alert("❌ SW no soportado");
+
+  try {
+    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    console.log("✅ SW registrado para test");
+
+    const permiso = await Notification.requestPermission();
+    if (permiso !== "granted") return alert("🔇 Permiso de notificaciones no concedido");
+
+    const token = await getToken(messaging, {
+      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+      serviceWorkerRegistration: registration
+    });
+
+    if (!token) return alert("❌ Token no generado");
+
+    console.log("📱 Token test:", token);
+
+    await fetch("/guardar-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token })
+    });
+
+    alert("✅ Token generado y guardado correctamente");
+
+    const res = await fetch("/enviar-alerta", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titulo: "🧪 Test alerta",
+        nombre: "Vecino Test",
+        ubicacion: "Tu ubicación"
+      })
+    });
+
+    const data = await res.json();
+    console.log("📡 Respuesta alerta test:", data);
+
+    alert("✅ Alerta de prueba enviada. Revisa tu dispositivo.");
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ Error en test: " + err.message);
+  }
+}
 </script>
 
 </body>
