@@ -13,17 +13,12 @@
       text-align: center;
       padding: 20px;
     }
-
-    h1 {
-      margin-bottom: 30px;
-    }
-
+    h1 { margin-bottom: 30px; }
     .botones {
       display: flex;
       flex-direction: column;
       gap: 15px;
     }
-
     button {
       padding: 20px;
       font-size: 18px;
@@ -31,7 +26,6 @@
       border: none;
       cursor: pointer;
     }
-
     .rojo { background: #dc2626; }
     .azul { background: #2563eb; }
     .verde { background: #16a34a; }
@@ -49,76 +43,88 @@
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-    authDomain: "alerta-rosko.firebaseapp.com",
-    projectId: "alerta-rosko",
-    storageBucket: "alerta-rosko.firebasestorage.app",
-    messagingSenderId: "1022811358317",
-    appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+  authDomain: "alerta-rosko.firebaseapp.com",
+  projectId: "alerta-rosko",
+  storageBucket: "alerta-rosko.firebasestorage.app",
+  messagingSenderId: "1022811358317",
+  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const messaging = getMessaging(app);
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
 
-  async function init() {
-    try {
-      // Registrar Service Worker
-      const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-      console.log("✅ Service Worker registrado");
+async function init() {
+  try {
+    // 1️⃣ Registrar Service Worker
+    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    console.log("✅ Service Worker registrado");
 
-      // Pedir permiso
-      const permiso = await Notification.requestPermission();
-      if (permiso !== "granted") {
-        console.log("🔇 bloqueado");
-        return;
-      }
-
-      // Obtener token
-      const token = await getToken(messaging, {
-        vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-        serviceWorkerRegistration: registration
-      });
-
-      console.log("📱 TOKEN:", token);
-
-      // Enviar token al backend
-      await fetch("/guardar-token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ token })
-      });
-
-    } catch (error) {
-      console.error("❌ Error init:", error);
+    // 2️⃣ Pedir permiso
+    const permiso = await Notification.requestPermission();
+    if (permiso !== "granted") {
+      console.log("🔇 Notificaciones bloqueadas");
+      return;
     }
+
+    // 3️⃣ Obtener token
+    const token = await getToken(messaging, {
+      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+      serviceWorkerRegistration: registration
+    });
+
+    if (!token) {
+      console.log("❌ Token no generado");
+      return;
+    }
+
+    console.log("📱 TOKEN:", token);
+
+    // 4️⃣ Guardar token en backend (FireStore)
+    await fetch("/guardar-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token })
+    });
+
+  } catch (error) {
+    console.error("❌ Error init:", error);
   }
+}
 
-  init();
+init();
 
-  // Enviar alerta
-  window.enviarAlerta = async (tipo) => {
-    try {
-      const res = await fetch("/enviar-alerta", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ tipo })
-      });
-
-      const data = await res.json();
-      console.log("📡 RESPUESTA:", data);
-
-    } catch (error) {
-      console.error("❌ Error enviando alerta:", error);
-    }
+// Enviar alerta
+window.enviarAlerta = async (tipo) => {
+  // Mapear tipo a mensaje por defecto
+  const titulos = {
+    emergencia: "🚨 Emergencia",
+    sospechoso: "👀 Sospechoso",
+    info: "ℹ️ Información"
   };
+
+  try {
+    const res = await fetch("/enviar-alerta", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titulo: titulos[tipo] || "🚨 Alerta",
+        nombre: "Vecino",
+        ubicacion: "Ubicación"
+      })
+    });
+
+    const data = await res.json();
+    console.log("📡 RESPUESTA:", data);
+
+  } catch (error) {
+    console.error("❌ Error enviando alerta:", error);
+  }
+};
 </script>
 
 </body>
