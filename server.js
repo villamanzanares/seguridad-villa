@@ -1,96 +1,90 @@
 import express from "express";
+import cors from "cors";
 import admin from "firebase-admin";
 import path from "path";
-import { fileURLToPath } from "url";
 
-// 🧭 RUTA BASE (IMPORTANTE para Render)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// 🔥 IMPORTANTE PARA RENDER
+const __dirname = new URL('.', import.meta.url).pathname;
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
-// ✅ SERVIR FRONTEND (CLAVE PARA ARREGLAR PANTALLA BLANCA)
+// 🔥 SERVIR ARCHIVOS DESDE /public
 app.use(express.static(path.join(__dirname, "public")));
 
+// 🔥 FORZAR INDEX REAL
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// 🔥 INICIALIZAR FIREBASE ADMIN
+// 🔥 FIREBASE ADMIN
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+
 admin.initializeApp({
-  credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_KEY))
+  credential: admin.credential.cert(serviceAccount)
 });
 
 const db = admin.firestore();
 
-// 🧠 GUARDAR TOKEN
+// 🔔 GUARDAR TOKEN
 app.post("/guardar-token", async (req, res) => {
   try {
     const { token } = req.body;
 
-    if (!token) {
-      return res.status(400).json({ error: "Token requerido" });
-    }
-
-    await db.collection("tokens").doc(token).set({
+    await db.collection("tokens").add({
       token,
-      fecha: new Date()
+      createdAt: new Date()
     });
 
-    console.log("✅ Token guardado:", token);
     res.json({ ok: true });
-
   } catch (error) {
-    console.error("❌ Error guardando token:", error);
+    console.error(error);
     res.status(500).json({ error: "Error guardando token" });
   }
 });
 
-// 🚨 ENVIAR ALERTA PUSH
+// 🚨 ENVIAR ALERTA
 app.post("/enviar-alerta", async (req, res) => {
   try {
-    const { tipo, nombre, telefono, direccion } = req.body;
+    const data = req.body;
 
-    const snapshot = await db.collection("tokens").get();
-    const tokens = snapshot.docs.map(doc => doc.id);
-
-    if (tokens.length === 0) {
-      return res.json({ ok: true, mensaje: "No hay dispositivos" });
-    }
-
-    const message = {
-      notification: {
-        title: `🚨 ${tipo}`,
-        body: `${nombre} - ${direccion}`
-      },
-      data: {
-        tipo: tipo || "",
-        nombre: nombre || "",
-        telefono: telefono || "",
-        direccion: direccion || ""
-      },
-      tokens: tokens
-    };
-
-    const response = await admin.messaging().sendEachForMulticast(message);
-
-    console.log("📩 Notificaciones enviadas:", response.successCount);
-
-    res.json({
-      ok: true,
-      enviados: response.successCount
+    // 🔥 guardar alerta
+    await db.collection("alertas").add({
+      ...data,
+      fecha: new Date()
     });
 
+    // 🔥 obtener tokens
+    const snapshot = await db.collection("tokens").get();
+    const tokens = snapshot.docs.map(doc => doc.data().token);
+
+    if (tokens.length > 0) {
+      await admin.messaging().sendEachForMulticast({
+        tokens,
+        notification: {
+          title: `🚨 ${data.tipo}`,
+          body: `${data.nombre} - ${data.direccion}`
+        },
+        data: {
+          tipo: data.tipo || "",
+          nombre: data.nombre || "",
+          telefono: data.telefono || "",
+          direccion: data.direccion || ""
+        }
+      });
+    }
+
+    res.json({ ok: true });
+
   } catch (error) {
-    console.error("❌ Error enviando alerta:", error);
+    console.error(error);
     res.status(500).json({ error: "Error enviando alerta" });
   }
 });
 
-// 🌐 PUERTO (Render usa process.env.PORT)
-const PORT = process.env.PORT || 8080;
-
+// 🚀 START
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor Villa Segura corriendo en puerto ${PORT}`);
+  console.log("🚀 Servidor corriendo en puerto", PORT);
 });
