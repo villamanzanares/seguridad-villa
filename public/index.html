@@ -70,7 +70,7 @@
   <select id="villa">
     <option value="">Selecciona Villa</option>
   </select>
-  <button onclick="guardarVecino()">Registrar</button>
+  <button id="btnRegistrar" onclick="guardarVecino()">Registrar</button>
 </div>
 
 <!-- INTERFAZ APP -->
@@ -116,38 +116,61 @@ let usuario = null;
 
 // Cargar villas para el select
 async function cargarVillas() {
-  const res = await fetch("/villas");
-  const data = await res.json();
-  const select = document.getElementById("villa");
-  data.villas.forEach(v => {
-    const opt = document.createElement("option");
-    opt.value = v; opt.textContent = v;
-    select.appendChild(opt);
-  });
+  try {
+    const res = await fetch("/villas");
+    const data = await res.json();
+    const select = document.getElementById("villa");
+    select.innerHTML = `<option value="">Selecciona Villa</option>`;
+    data.villas.forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v; opt.textContent = v;
+      select.appendChild(opt);
+    });
+  } catch(e) { console.error(e); }
 }
 
 cargarVillas();
 
 // Guardar vecino + token
 async function guardarVecino() {
+  const btn = document.getElementById("btnRegistrar");
+  btn.disabled = true;
+  btn.textContent = "Registrando...";
+
   const nombre = document.getElementById("nombre").value;
   const telefono = document.getElementById("telefono").value;
   const direccion = document.getElementById("direccion").value;
   const casaDepto = document.getElementById("casaDepto").value;
   const villa = document.getElementById("villa").value;
 
-  if (!nombre || !villa) return alert("Nombre y Villa obligatorios");
+  if (!nombre || !villa) { 
+    alert("Nombre y Villa obligatorios");
+    btn.disabled = false; btn.textContent = "Registrar";
+    return;
+  }
 
   try {
-    // Registrar SW
     const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    await navigator.serviceWorker.ready;
     const permiso = await Notification.requestPermission();
-    if (permiso !== "granted") return alert("Permiso de notificación denegado");
+    if (permiso !== "granted") { 
+      alert("Permiso de notificación denegado");
+      btn.disabled = false; btn.textContent = "Registrar";
+      return; 
+    }
 
-    const token = await getToken(messaging, {
-      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-      serviceWorkerRegistration: registration
-    });
+    let token = null;
+    try {
+      token = await getToken(messaging, {
+        vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+        serviceWorkerRegistration: registration
+      });
+    } catch(e) {
+      console.error("❌ No se pudo obtener token:", e);
+      alert("No se pudo registrar notificaciones. Revisa permisos o SW.");
+      btn.disabled = false; btn.textContent = "Registrar";
+      return;
+    }
 
     usuario = { nombre, telefono, direccion, casaDepto, villa, token };
 
@@ -163,17 +186,24 @@ async function guardarVecino() {
 
     console.log("📱 Token guardado:", token);
 
-  } catch(e) { console.error(e); }
+  } catch(e) { 
+    console.error(e); 
+    alert("Error al registrar usuario");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Registrar";
+  }
 }
 
 // Enviar alerta
 async function enviarAlerta(tipo) {
   if (!usuario) return;
   try {
+    const payload = { tipo, usuario };
     const res = await fetch("/enviar-alerta", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tipo, usuario })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     console.log("📡 Alerta enviada:", data);
@@ -209,7 +239,6 @@ async function agregarVilla() {
   document.getElementById("nuevaVilla").value = "";
   cargarVillas();
 }
-
 </script>
 </body>
 </html>
