@@ -1,137 +1,112 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Villa Segura</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #0f172a;
-      color: white;
-      margin: 0;
-      padding: 20px;
-    }
+<title>Villa Segura</title>
 
-    h1 {
-      margin-bottom: 20px;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
 
-    .botones {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
+#footer-alerta {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #111;
+  color: white;
+  padding: 15px;
+  text-align: center;
+  font-size: 16px;
+}
 
-    button {
-      padding: 20px;
-      font-size: 18px;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .robo { background: #ef4444; }
-    .incendio { background: #f97316; }
-    .asistencia { background: #3b82f6; }
-
-    #alertas {
-      margin-top: 30px;
-      text-align: left;
-    }
-
-    .alerta {
-      background: #1e293b;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 10px;
-    }
-  </style>
+.alerta {
+  font-weight: bold;
+  color: #ff4444;
+}
+</style>
 </head>
 
 <body>
 
-<h1>🚨 Villa Segura</h1>
+<h2 style="text-align:center;">Villa Segura</h2>
 
-<div class="botones">
-  <button class="robo" onclick="enviarAlerta('ROBO')">🚔 ROBO</button>
-  <button class="incendio" onclick="enviarAlerta('INCENDIO')">🔥 INCENDIO</button>
-  <button class="asistencia" onclick="enviarAlerta('ASISTENCIA')">🆘 ASISTENCIA</button>
+<div id="footer-alerta">
+  Esperando alertas...
 </div>
 
-<div id="alertas"></div>
-
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "TU_API_KEY",
-    authDomain: "TU_DOMINIO",
-    projectId: "alerta-rosko",
-    messagingSenderId: "TU_SENDER_ID",
-    appId: "TU_APP_ID"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+  authDomain: "alerta-rosko.firebaseapp.com",
+  projectId: "alerta-rosko",
+  storageBucket: "alerta-rosko.firebasestorage.app",
+  messagingSenderId: "1022811358317",
+  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const messaging = getMessaging(app);
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+const db = getFirestore(app);
 
-  // 🔑 REGISTRAR TOKEN
-  async function registrarToken() {
-    try {
-      const token = await getToken(messaging, {
-        vapidKey: "TU_VAPID_KEY"
-      });
+// 🔔 Registrar Service Worker
+navigator.serviceWorker.register("/firebase-messaging-sw.js")
+.then((registration) => {
 
-      console.log("📱 Token:", token);
+  getToken(messaging, {
+    vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+    serviceWorkerRegistration: registration
+  })
+  .then((currentToken) => {
+    if (currentToken) {
+      console.log("Token:", currentToken);
 
-      await fetch("/guardar-token", {
+      // enviar token a tu backend
+      fetch("/guardar-token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ token })
+        body: JSON.stringify({ token: currentToken })
       });
-
-    } catch (error) {
-      console.error("❌ Error token:", error);
     }
-  }
-
-  registrarToken();
-
-  // 🔔 ESCUCHAR MENSAJES EN PRIMER PLANO (CLAVE 🔥)
-  onMessage(messaging, (payload) => {
-    console.log("📩 Mensaje recibido:", payload);
-
-    const tipo = payload.data?.tipo || "ALERTA";
-    mostrarAlerta(tipo);
   });
 
-  // 📡 ENVIAR ALERTA
-  window.enviarAlerta = async (tipo) => {
-    await fetch("/enviar-alerta", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ tipo })
-    });
-  };
+});
 
-  // 🧠 MOSTRAR ALERTA EN UI
-  function mostrarAlerta(tipo) {
-    const contenedor = document.getElementById("alertas");
+// 🔥 ESCUCHA EN TIEMPO REAL (LA CLAVE DEL PROBLEMA)
+const footer = document.getElementById("footer-alerta");
 
-    const div = document.createElement("div");
-    div.className = "alerta";
-    div.innerHTML = `🚨 Alerta: <strong>${tipo}</strong>`;
+const q = query(
+  collection(db, "alertas"),
+  orderBy("timestamp", "desc"),
+  limit(1)
+);
 
-    contenedor.prepend(div);
-  }
+onSnapshot(q, (snapshot) => {
+  snapshot.forEach((doc) => {
+    const data = doc.data();
+
+    footer.innerHTML = `
+      🚨 <span class="alerta">${data.tipo}</span><br>
+      👤 ${data.nombre}<br>
+      📍 ${data.direccion}
+    `;
+  });
+});
+
+// 📩 Mensaje en primer plano (opcional)
+onMessage(messaging, (payload) => {
+  console.log("Mensaje recibido:", payload);
+});
+
 </script>
 
 </body>
