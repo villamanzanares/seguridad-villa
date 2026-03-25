@@ -8,11 +8,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 RUTAS ABSOLUTAS (IMPORTANTE EN RENDER)
+// 🧭 RUTAS (IMPORTANTE EN RENDER)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 👉 SERVIR CARPETA PUBLIC
+// 🌐 SERVIR FRONTEND
 app.use(express.static(path.join(__dirname, "public")));
 
 // 🔥 FIREBASE ADMIN
@@ -33,11 +33,13 @@ let tokens = [];
 app.post("/guardar-token", (req, res) => {
   const { token } = req.body;
 
-  if (!token) return res.status(400).send("Token requerido");
+  if (!token) {
+    return res.status(400).send("Token requerido");
+  }
 
   if (!tokens.includes(token)) {
     tokens.push(token);
-    console.log("✅ Token guardado");
+    console.log("✅ Token guardado:", token.substring(0, 20) + "...");
   }
 
   res.send({ ok: true });
@@ -48,43 +50,56 @@ app.post("/guardar-token", (req, res) => {
 // =======================================
 app.post("/enviar-alerta", async (req, res) => {
   try {
-    const { tipo, nombre, direccion } = req.body;
+    const { tipo, nombre, telefono, direccion } = req.body;
+
+    if (!tipo) {
+      return res.status(400).send("Tipo de alerta requerido");
+    }
 
     // 🔥 GUARDAR EN FIRESTORE
-    await db.collection("alertas").add({
+    const nuevaAlerta = {
       tipo,
-      nombre,
-      direccion,
+      nombre: nombre || "Anónimo",
+      telefono: telefono || "Sin teléfono",
+      direccion: direccion || "Sin dirección",
       timestamp: new Date()
-    });
+    };
 
-    // 🔔 PUSH
+    await db.collection("alertas").add(nuevaAlerta);
+
+    console.log("🚨 Alerta guardada:", nuevaAlerta);
+
+    // 🔔 ENVIAR PUSH
     if (tokens.length > 0) {
       const message = {
         notification: {
-          title: "🚨 Nueva alerta",
-          body: `${tipo} - ${nombre}`
+          title: `🚨 ${tipo}`,
+          body: `${nombre || "Vecino"} - ${direccion || ""}`
         },
         tokens: tokens
       };
 
       await admin.messaging().sendEachForMulticast(message);
+
+      console.log("📲 Push enviado a", tokens.length, "dispositivos");
     }
 
     res.send({ ok: true });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).send("Error");
+    console.error("❌ Error al enviar alerta:", error);
+    res.status(500).send("Error interno");
   }
 });
 
-// 👉 ESTA LÍNEA HACE QUE / CARGUE TU INDEX.HTML
+// =======================================
+// 🌐 RUTA PRINCIPAL (CARGA TU APP)
+// =======================================
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
-// 🚀 START
+// 🚀 START SERVER
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
