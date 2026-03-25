@@ -1,55 +1,32 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Villa Segura</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Villa Segura</title>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: white;
-      text-align: center;
-      padding: 20px;
-    }
+<style>
+body { font-family: Arial, sans-serif; background: #0f172a; color: white; text-align: center; padding: 20px; }
+h1 { margin-bottom: 20px; }
 
-    h1 { margin-bottom: 20px; }
+form, .botones, footer { max-width: 400px; margin: 20px auto; }
+input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: none; font-size: 16px; }
+button { cursor: pointer; font-weight: bold; }
 
-    form, .botones, footer { max-width: 400px; margin: 20px auto; }
+.rojo { background: #dc2626; color: white; }
+.azul { background: #2563eb; color: white; }
+.verde { background: #16a34a; color: white; }
+.naranja { background: #f97316; color: white; }
 
-    input, select, button { 
-      width: 100%; 
-      padding: 12px; 
-      margin: 8px 0; 
-      border-radius: 8px; 
-      border: none; 
-      font-size: 16px; 
-    }
-
-    button { cursor: pointer; font-weight: bold; }
-
-    .rojo { background: #dc2626; color: white; }
-    .azul { background: #2563eb; color: white; }
-    .verde { background: #16a34a; color: white; }
-    .naranja { background: #f97316; color: white; }
-
-    footer {
-      margin-top: 30px;
-      padding: 20px;
-      border-top: 2px solid #374151;
-      text-align: center;
-      background: #1e293b;
-      border-radius: 12px;
-    }
-
-    footer div { margin: 6px 0; font-size: 16px; }
-    footer .tipo { font-weight: bold; font-size: 18px; color: #facc15; }
-    footer .nombre { font-weight: bold; color: #34d399; }
-    footer .direccion, footer .telefono, footer .villa { color: #60a5fa; }
-  </style>
+footer { margin-top: 30px; padding: 20px; border-top: 2px solid #374151; text-align: center; background: #1e293b; border-radius: 12px; }
+footer div { margin: 6px 0; font-size: 16px; }
+footer .tipo { font-weight: bold; font-size: 18px; color: #facc15; }
+footer .nombre { font-weight: bold; color: #34d399; }
+footer .direccion, footer .telefono, footer .villa { color: #60a5fa; }
+</style>
 </head>
 <body>
+
 <h1>🚨 Villa Segura</h1>
 
 <!-- FORMULARIO DE INSCRIPCIÓN -->
@@ -83,117 +60,104 @@
 </footer>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-  import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-    authDomain: "alerta-rosko.firebaseapp.com",
-    projectId: "alerta-rosko",
-    storageBucket: "alerta-rosko.firebasestorage.app",
-    messagingSenderId: "1022811358317",
-    appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+  authDomain: "alerta-rosko.firebaseapp.com",
+  projectId: "alerta-rosko",
+  storageBucket: "alerta-rosko.firebasestorage.app",
+  messagingSenderId: "1022811358317",
+  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const messaging = getMessaging(app);
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+const db = getFirestore(app);
 
-  let usuario = null; // Datos del vecino
+let usuario = null;
 
-  async function init() {
-    try {
-      const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-      console.log("✅ Service Worker registrado");
+async function init() {
+  try {
+    const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    console.log("✅ Service Worker registrado");
 
-      const permiso = await Notification.requestPermission();
-      if (permiso !== "granted") { console.log("🔇 Notificaciones bloqueadas"); return; }
+    const permiso = await Notification.requestPermission();
+    if (permiso !== "granted") { console.log("🔇 Notificaciones bloqueadas"); return; }
 
-      const token = await getToken(messaging, {
-        vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-        serviceWorkerRegistration: registration
-      });
-
-      console.log("📱 TOKEN:", token);
-
-      // Revisar si hay datos en localStorage
-      const datosGuardados = localStorage.getItem("vecino");
-      if (datosGuardados) {
-        usuario = JSON.parse(datosGuardados);
-        document.getElementById("form-inscripcion").style.display = "none";
-        document.getElementById("botones-alerta").style.display = "block";
-      }
-
-      // Guardar token en backend junto con datos si ya existe usuario
-      if (usuario) {
-        await fetch("/guardar-token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, ...usuario })
-        });
-      }
-
-      // Guardar token temporalmente en usuario para inscripción futura
-      usuario = usuario || { token };
-
-    } catch (error) { console.error("❌ Error init:", error); }
-  }
-
-  init();
-
-  // FORMULARIO DE INSCRIPCIÓN
-  document.getElementById("form-inscripcion").addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    usuario = {
-      nombre: document.getElementById("nombre").value,
-      telefono: document.getElementById("telefono").value,
-      direccion: document.getElementById("direccion").value,
-      casaDepto: document.getElementById("casaDepto").value,
-      villa: document.getElementById("villa").value,
-      token: usuario.token
-    };
-
-    // Guardar en localStorage
-    localStorage.setItem("vecino", JSON.stringify(usuario));
-
-    // Ocultar formulario y mostrar botones
-    document.getElementById("form-inscripcion").style.display = "none";
-    document.getElementById("botones-alerta").style.display = "block";
-
-    // Guardar en backend
-    await fetch("/guardar-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(usuario)
+    const token = await getToken(messaging, {
+      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+      serviceWorkerRegistration: registration
     });
 
-    console.log("✅ Datos guardados y usuario listo");
-  });
+    console.log("📱 TOKEN:", token);
 
-  // FUNCION PARA ENVIAR ALERTA
-  window.enviarAlerta = async (tipo) => {
-    if (!usuario) return alert("Usuario no registrado");
+    // Revisar Firestore si existe usuario
+    const userDoc = await getDoc(doc(db, "vecinos", token));
+    if (userDoc.exists()) {
+      usuario = userDoc.data();
+      document.getElementById("form-inscripcion").style.display = "none";
+      document.getElementById("botones-alerta").style.display = "block";
+      actualizarFooter();
+    } else {
+      usuario = { token };
+    }
 
-    try {
-      const res = await fetch("/enviar-alerta", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tipo, usuario })
-      });
+  } catch (error) { console.error("❌ Error init:", error); }
+}
 
-      const data = await res.json();
-      console.log("📡 Respuesta alerta:", data);
+init();
 
-      // Actualizar footer
-      const footer = document.getElementById("footer-info");
-      footer.querySelector(".tipo").textContent = `Tipo de Emergencia: ${tipo}`;
-      footer.querySelector(".nombre").textContent = `Nombre: ${usuario.nombre}`;
-      footer.querySelector(".direccion").textContent = `Dirección: ${usuario.direccion} / ${usuario.casaDepto}`;
-      footer.querySelector(".telefono").textContent = `Teléfono: ${usuario.telefono}`;
-      footer.querySelector(".villa").textContent = `Villa: ${usuario.villa}`;
+// FORMULARIO DE INSCRIPCIÓN
+document.getElementById("form-inscripcion").addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-    } catch (error) { console.error("❌ Error enviando alerta:", error); }
+  usuario = {
+    nombre: document.getElementById("nombre").value,
+    telefono: document.getElementById("telefono").value,
+    direccion: document.getElementById("direccion").value,
+    casaDepto: document.getElementById("casaDepto").value,
+    villa: document.getElementById("villa").value,
+    token: usuario.token
   };
+
+  // Guardar en Firestore
+  await setDoc(doc(db, "vecinos", usuario.token), usuario, { merge: true });
+
+  document.getElementById("form-inscripcion").style.display = "none";
+  document.getElementById("botones-alerta").style.display = "block";
+
+  console.log("✅ Datos guardados en Firestore y usuario listo");
+});
+
+window.enviarAlerta = async (tipo) => {
+  if (!usuario) return alert("Usuario no registrado");
+
+  try {
+    const res = await fetch("/enviar-alerta", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tipo, usuario })
+    });
+
+    const data = await res.json();
+    console.log("📡 Respuesta alerta:", data);
+
+    actualizarFooter(tipo);
+
+  } catch (error) { console.error("❌ Error enviando alerta:", error); }
+};
+
+function actualizarFooter(tipo = "-") {
+  const footer = document.getElementById("footer-info");
+  footer.querySelector(".tipo").textContent = `Tipo de Emergencia: ${tipo}`;
+  footer.querySelector(".nombre").textContent = `Nombre: ${usuario.nombre}`;
+  footer.querySelector(".direccion").textContent = `Dirección: ${usuario.direccion} / ${usuario.casaDepto}`;
+  footer.querySelector(".telefono").textContent = `Teléfono: ${usuario.telefono}`;
+  footer.querySelector(".villa").textContent = `Villa: ${usuario.villa}`;
+}
 </script>
 </body>
 </html>
