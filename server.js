@@ -16,8 +16,7 @@ if (!admin.apps.length && serviceAccount) {
   console.log("🔥 Firebase OK");
 }
 
-// MEMORIA DE TOKENS Y USUARIOS
-let usuarios = []; // {nombre, telefono, direccion, casaDepto, villa, token}
+const db = admin.firestore();
 
 // FRONTEND
 const __filename = fileURLToPath(import.meta.url);
@@ -25,43 +24,50 @@ const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
 
-// GUARDAR TOKEN + DATOS VECINO
-app.post("/guardar-token", (req, res) => {
-  const { token, nombre, telefono, direccion, casaDepto, villa } = req.body;
-  if (!token || !nombre) return res.status(400).json({ error: "Datos incompletos" });
+// GUARDAR TOKEN + DATOS VECINO EN FIRESTORE
+app.post("/guardar-token", async (req, res) => {
+  try {
+    const { token, nombre, telefono, direccion, casaDepto, villa } = req.body;
+    if (!token || !nombre) return res.status(400).json({ error: "Datos incompletos" });
 
-  const existente = usuarios.find(u => u.token === token);
-  if (!existente) {
-    usuarios.push({ token, nombre, telefono, direccion, casaDepto, villa });
-    console.log("📱 Usuario guardado:", nombre, villa);
-  } else {
-    Object.assign(existente, { nombre, telefono, direccion, casaDepto, villa });
+    const userRef = db.collection("vecinos").doc(token);
+    await userRef.set({ nombre, telefono, direccion, casaDepto, villa, token }, { merge: true });
+    console.log("📱 Vecino guardado:", nombre, villa);
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("❌ Error guardar-token:", error);
+    res.status(500).json({ error: error.message });
   }
-
-  res.json({ ok: true });
 });
 
-// ENVIAR ALERTA A TODOS
+// ENVIAR ALERTA A TODOS LOS VECINOS
 app.post("/enviar-alerta", async (req, res) => {
   try {
     const { tipo, usuario } = req.body;
 
-    if (usuarios.length === 0) return res.status(400).json({ error: "No hay usuarios registrados" });
+    const vecinosSnap = await db.collection("vecinos").get();
+    if (vecinosSnap.empty) return res.status(400).json({ error: "No hay vecinos registrados" });
+
+    const tokens = vecinosSnap.docs.map(doc => doc.data().token);
 
     const mensaje = {
-      notification: { 
+      notification: {
         title: `🚨 ${tipo.toUpperCase()}`,
         body: `${usuario.nombre} - ${usuario.direccion} / ${usuario.casaDepto}`
       },
       data: { ...usuario, tipo },
-      tokens: usuarios.map(u => u.token)
+      tokens
     };
 
     const response = await admin.messaging().sendEachForMulticast(mensaje);
-    console.log(`✅ Alertas enviadas: ${response.successCount} de ${usuarios.length}`);
-    res.json({ ok: true });
+    console.log(`✅ Alertas enviadas: ${response.successCount} de ${tokens.length}`);
 
-  } catch (error) { console.error("❌ Error:", error); res.status(500).json({ error: error.message }); }
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("❌ Error enviar-alerta:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 const PORT = process.env.PORT || 8080;
