@@ -3,93 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ALERTIA</title>
+<title>Alerta Vecinal</title>
 
 <style>
 body {
-  margin: 0;
   font-family: Arial, sans-serif;
-  background: #0B1F3A;
+  background: #111;
   color: white;
   text-align: center;
-}
-
-/* HEADER */
-header {
-  padding: 30px 20px 10px;
-}
-
-.sub {
-  font-size: 14px;
-  opacity: 0.7;
-}
-
-.title {
-  font-size: 28px;
-  font-weight: bold;
-  letter-spacing: 2px;
-}
-
-/* BOTONES */
-.container {
   padding: 20px;
 }
 
-.btn {
-  display: block;
+h1 {
+  color: #ff3b3b;
+}
+
+button {
   width: 90%;
-  max-width: 400px;
-  margin: 12px auto;
-  padding: 20px;
+  padding: 15px;
+  margin: 10px;
   font-size: 18px;
   border: none;
-  border-radius: 14px;
+  border-radius: 10px;
+  background: #ff3b3b;
   color: white;
-  cursor: pointer;
 }
 
-.robo { background: #dc2626; }
-.emergencia { background: #ea580c; }
-.sos { background: #2563eb; }
-.test { background: #16a34a; }
-
-/* FOOTER */
-footer {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: #09162b;
-  padding: 15px;
-  font-size: 14px;
+input {
+  width: 90%;
+  padding: 10px;
+  margin: 5px;
+  border-radius: 8px;
+  border: none;
 }
 </style>
-</head>
 
+</head>
 <body>
 
-<header>
-  <div class="sub">Alerta Vecinal</div>
-  <div class="title">🚨 ALERTIA</div>
-</header>
+<h1>🚨 ALERTA VECINAL</h1>
 
-<div class="container">
-  <button class="btn robo" onclick="enviarAlerta('ROBO')">🚨 ROBO</button>
-  <button class="btn emergencia" onclick="enviarAlerta('EMERGENCIA')">🔥 EMERGENCIA</button>
-  <button class="btn sos" onclick="enviarAlerta('SOS')">🆘 SOS</button>
-  <button class="btn test" onclick="enviarAlerta('TEST')">✅ TEST</button>
-</div>
+<input id="nombre" placeholder="Tu nombre">
+<input id="telefono" placeholder="Teléfono">
+<input id="ubicacion" placeholder="Ubicación">
 
-<footer id="footer">
-Esperando alertas...
-</footer>
+<button onclick="enviarAlerta()">ENVIAR ALERTA</button>
 
-<audio id="sirena" src="sirena.mp3" preload="auto"></audio>
+<audio id="sirena" src="/sirena.mp3"></audio>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
@@ -99,93 +65,99 @@ const firebaseConfig = {
   appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
 };
 
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
 
-const footer = document.getElementById("footer");
-const sirena = document.getElementById("sirena");
+const messaging = firebase.messaging();
 
-// 🔔 SW + TOKEN
+// 🔓 DESBLOQUEAR AUDIO
+document.addEventListener("click", () => {
+  const audio = document.getElementById("sirena");
+  audio.play().then(() => {
+    audio.pause();
+    audio.currentTime = 0;
+    console.log("🔊 Audio desbloqueado");
+  }).catch(() => {});
+}, { once: true });
+
+// ===============================
+// 📲 INICIALIZAR
+// ===============================
 async function init() {
   try {
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    await navigator.serviceWorker.ready;
+    const permiso = await Notification.requestPermission();
 
-    const token = await getToken(messaging, {
-      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-      serviceWorkerRegistration: registration
+    if (permiso !== "granted") {
+      console.log("🔇 bloqueado");
+      return;
+    }
+
+    const token = await messaging.getToken({
+      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
     });
 
     console.log("TOKEN:", token);
 
-    await fetch('/guardar-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    // 🔥 GUARDAR TOKEN EN EL SERVER
+    await fetch("/guardar-token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({ token })
     });
 
-  } catch (e) {
-    console.error(e);
+  } catch (error) {
+    console.error("❌ Error init:", error);
   }
 }
 
 init();
 
-// 🚀 ALERTA
-window.enviarAlerta = async (tipo) => {
-  const datos = {
-    tipo,
-    nombre: "Vecino",
-    telefono: "123456789",
-    direccion: "Casa X",
-    fecha: new Date()
-  };
+// ===============================
+// 🚨 ENVIAR ALERTA
+// ===============================
+async function enviarAlerta() {
+  const nombre = document.getElementById("nombre").value;
+  const telefono = document.getElementById("telefono").value;
+  const ubicacion = document.getElementById("ubicacion").value;
 
-  await addDoc(collection(db, "alertas"), datos);
-
-  await fetch('/enviar-alerta', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(datos)
-  });
-};
-
-// 👁️ TIEMPO REAL
-const q = query(collection(db, "alertas"), orderBy("fecha", "desc"), limit(1));
-
-onSnapshot(q, (snapshot) => {
-  snapshot.forEach((doc) => {
-    const data = doc.data();
-
-    footer.innerHTML = `
-      🚨 <b>${data.tipo}</b><br>
-      👤 ${data.nombre}<br>
-      📞 ${data.telefono}<br>
-      📍 ${data.direccion}
-    `;
-
-    // 🔊 SONIDO
-    sirena.currentTime = 0;
-    sirena.play().catch(() => {
-      console.log("🔇 bloqueado");
+  try {
+    const res = await fetch("/enviar-alerta", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        titulo: "🚨 EMERGENCIA",
+        nombre,
+        telefono,
+        ubicacion
+      })
     });
+
+    const data = await res.json();
+    console.log("RESPUESTA:", data);
+
+  } catch (error) {
+    console.error("❌ Error enviando alerta:", error);
+  }
+}
+
+// ===============================
+// 🔔 RECIBIR MENSAJES
+// ===============================
+messaging.onMessage((payload) => {
+  console.log("📩 Mensaje recibido:", payload);
+
+  const audio = document.getElementById("sirena");
+  audio.play().catch(() => {
+    console.log("🔇 bloqueado");
   });
-}); // ✅ AQUÍ ESTABA EL ERROR
 
-// 📩 PUSH FOREGROUND
-onMessage(messaging, (payload) => {
-  const data = payload.data || {};
-
-  footer.innerHTML = `
-    🚨 <b>${data.tipo || 'ALERTA'}</b><br>
-    👤 ${data.nombre || 'Vecino'}<br>
-    📞 ${data.telefono || 'Sin teléfono'}<br>
-    📍 ${data.direccion || 'Sin dirección'}
-  `;
-
-  sirena.currentTime = 0;
-  sirena.play().catch(()=>{});
+  alert(
+    payload.notification.title + "\n" +
+    payload.notification.body
+  );
 });
 </script>
 
