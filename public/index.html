@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ALERTIA 999</title>
+<title>ALERTIA</title>
 
 <style>
 body {
@@ -17,11 +17,6 @@ body {
 /* HEADER */
 header {
   padding: 30px 20px 10px;
-}
-
-header img {
-  width: 80px;
-  margin-bottom: 10px;
 }
 
 .sub {
@@ -38,7 +33,6 @@ header img {
 /* BOTONES */
 .container {
   padding: 20px;
-  margin-top: 10px;
 }
 
 .btn {
@@ -52,11 +46,6 @@ header img {
   border-radius: 14px;
   color: white;
   cursor: pointer;
-  transition: 0.2s;
-}
-
-.btn:active {
-  transform: scale(0.95);
 }
 
 .robo { background: #dc2626; }
@@ -72,7 +61,6 @@ footer {
   background: #09162b;
   padding: 15px;
   font-size: 14px;
-  line-height: 1.4;
 }
 </style>
 </head>
@@ -80,8 +68,6 @@ footer {
 <body>
 
 <header>
-  <!-- puedes agregar logo.png después -->
-  <!-- <img src="logo.png"> -->
   <div class="sub">Alerta Vecinal</div>
   <div class="title">🚨 ALERTIA</div>
 </header>
@@ -97,7 +83,6 @@ footer {
 Esperando alertas...
 </footer>
 
-<!-- 🔊 SONIDO -->
 <audio id="sirena" src="sirena.mp3" preload="auto"></audio>
 
 <script type="module">
@@ -121,12 +106,10 @@ const db = getFirestore(app);
 const footer = document.getElementById("footer");
 const sirena = document.getElementById("sirena");
 
-// 🔔 TOKEN + SW
-const registrarSWyToken = async () => {
+// 🔔 SW + TOKEN
+async function init() {
   try {
     const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-
-    // 🔥 CLAVE: esperar a que esté activo
     await navigator.serviceWorker.ready;
 
     const token = await getToken(messaging, {
@@ -134,26 +117,22 @@ const registrarSWyToken = async () => {
       serviceWorkerRegistration: registration
     });
 
-    if (token) {
-      console.log("✅ TOKEN OK:", token);
+    console.log("TOKEN:", token);
 
-      await fetch('/guardar-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token })
-      });
-    } else {
-      console.warn("⚠️ No se obtuvo token");
-    }
+    await fetch('/guardar-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
 
-  } catch (error) {
-    console.error("❌ Error en SW/token:", error);
+  } catch (e) {
+    console.error(e);
   }
-};
+}
 
-registrarSWyToken();
+init();
 
-// 🚀 ENVIAR ALERTA
+// 🚀 ALERTA
 window.enviarAlerta = async (tipo) => {
   const datos = {
     tipo,
@@ -172,7 +151,7 @@ window.enviarAlerta = async (tipo) => {
   });
 };
 
-// 👁️ TIEMPO REAL (🔥 CLAVE)
+// 👁️ TIEMPO REAL
 const q = query(collection(db, "alertas"), orderBy("fecha", "desc"), limit(1));
 
 onSnapshot(q, (snapshot) => {
@@ -186,22 +165,16 @@ onSnapshot(q, (snapshot) => {
       📍 ${data.direccion}
     `;
 
-    // 🔊 SONIDO CUANDO CAMBIA ALERTA
-    sirena.muted = false;
+    // 🔊 SONIDO
     sirena.currentTime = 0;
-
-const playPromise = sirena.play();
-
-if (playPromise !== undefined) {
-  playPromise.catch(() => {
-    console.log("🔇 Autoplay bloqueado por el navegador");
+    sirena.play().catch(() => {
+      console.log("🔇 bloqueado");
+    });
   });
-}
+}); // ✅ AQUÍ ESTABA EL ERROR
 
-// 📩 PUSH EN PRIMER PLANO
+// 📩 PUSH FOREGROUND
 onMessage(messaging, (payload) => {
-  console.log("Mensaje recibido:", payload);
-
   const data = payload.data || {};
 
   footer.innerHTML = `
