@@ -1,46 +1,42 @@
 import express from "express";
 import cors from "cors";
 import admin from "firebase-admin";
-import path from "path";
-
-// 🔥 IMPORTANTE PARA RENDER
-const __dirname = new URL('.', import.meta.url).pathname;
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 SERVIR ARCHIVOS DESDE /public
-app.use(express.static(path.join(__dirname, "public")));
+// 🔥 CONFIG FIREBASE DESDE VARIABLES DE ENTORNO
+try {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 
-// 🔥 FORZAR INDEX REAL
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
 
-// 🔥 FIREBASE ADMIN
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+  console.log("🔥 Firebase Admin inicializado OK");
+} catch (error) {
+  console.error("❌ Error inicializando Firebase:", error);
+}
 
 const db = admin.firestore();
 
+let tokens = [];
+
 // 🔔 GUARDAR TOKEN
-app.post("/guardar-token", async (req, res) => {
+app.post("/guardar-token", (req, res) => {
   try {
     const { token } = req.body;
 
-    await db.collection("tokens").add({
-      token,
-      createdAt: new Date()
-    });
+    if (token && !tokens.includes(token)) {
+      tokens.push(token);
+      console.log("📱 Token guardado:", token);
+    }
 
-    res.json({ ok: true });
+    res.sendStatus(200);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error guardando token" });
+    console.error("❌ Error guardando token:", error);
+    res.sendStatus(500);
   }
 });
 
@@ -49,42 +45,40 @@ app.post("/enviar-alerta", async (req, res) => {
   try {
     const data = req.body;
 
-    // 🔥 guardar alerta
-    await db.collection("alertas").add({
-      ...data,
-      fecha: new Date()
-    });
+    console.log("🚨 Enviando alerta:", data);
 
-    // 🔥 obtener tokens
-    const snapshot = await db.collection("tokens").get();
-    const tokens = snapshot.docs.map(doc => doc.data().token);
-
-    if (tokens.length > 0) {
-      await admin.messaging().sendEachForMulticast({
-        tokens,
-        notification: {
-          title: `🚨 ${data.tipo}`,
-          body: `${data.nombre} - ${data.direccion}`
-        },
-        data: {
-          tipo: data.tipo || "",
-          nombre: data.nombre || "",
-          telefono: data.telefono || "",
-          direccion: data.direccion || ""
-        }
-      });
+    if (!tokens.length) {
+      console.log("⚠️ No hay tokens registrados");
+      return res.sendStatus(200);
     }
 
-    res.json({ ok: true });
+    const message = {
+      notification: {
+        title: `🚨 ${data.tipo}`,
+        body: `${data.nombre} - ${data.direccion}`,
+      },
+      data: {
+        tipo: data.tipo || "",
+        nombre: data.nombre || "",
+        telefono: data.telefono || "",
+        direccion: data.direccion || "",
+      },
+      tokens: tokens,
+    };
 
+    const response = await admin.messaging().sendEachForMulticast(message);
+
+    console.log("📩 Resultado envío:", response);
+
+    res.sendStatus(200);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error enviando alerta" });
+    console.error("❌ Error enviando alerta:", error);
+    res.sendStatus(500);
   }
 });
 
-// 🚀 START
-const PORT = process.env.PORT || 10000;
+// 🚀 SERVER
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log("🚀 Servidor corriendo en puerto", PORT);
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
