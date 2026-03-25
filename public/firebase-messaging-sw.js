@@ -1,27 +1,52 @@
-importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
+// 🔥 Firebase compat (necesario en Service Worker)
+importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging-compat.js");
 
+// 🔥 Config Firebase
 firebase.initializeApp({
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
   projectId: "alerta-rosko",
+  storageBucket: "alerta-rosko.firebasestorage.app",
   messagingSenderId: "1022811358317",
   appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
 });
 
 const messaging = firebase.messaging();
 
-// 🔥 BACKGROUND
-messaging.onBackgroundMessage(function(payload) {
-  console.log("🔥 SW recibió:", payload);
+// 🔔 CUANDO LLEGA PUSH (APP CERRADA O EN SEGUNDO PLANO)
+self.addEventListener("push", function(event) {
+  if (!event.data) return;
 
-  const data = payload.data || {};
+  const data = event.data.json();
 
-  const title = "🚨 ALERTA VILLA SEGURA";
-  const body = `${data.tipo || "Alerta"} reportado por ${data.nombre || "vecino"}`;
+  const titulo = data.notification?.title || "🚨 ALERTIA";
+  const cuerpo = data.notification?.body || "Nueva alerta vecinal";
 
-  self.registration.showNotification(title, {
-    body: body,
-    icon: "/icon.png"
-  });
+  event.waitUntil(
+    self.registration.showNotification(titulo, {
+      body: cuerpo,
+      icon: "/icon.png",
+      badge: "/icon.png",
+      vibrate: [300, 100, 300, 100, 500],
+      requireInteraction: true, // 👀 no desaparece sola
+      data: data
+    })
+  );
+});
+
+// 👆 CLICK EN NOTIFICACIÓN
+self.addEventListener("notificationclick", function(event) {
+  event.notification.close();
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if (client.url.includes("/") && "focus" in client) {
+          return client.focus();
+        }
+      }
+      return clients.openWindow("/");
+    })
+  );
 });
