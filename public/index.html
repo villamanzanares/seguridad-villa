@@ -4,62 +4,101 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Villa Segura</title>
+
 <style>
-body { font-family: Arial, sans-serif; background:#0f172a; color:white; text-align:center; padding:0; margin:0;}
-#app { display:none; padding:20px; }
-h1 { margin-bottom:20px; }
-.botones { display:flex; flex-direction:column; gap:12px; margin-bottom:20px; }
-button { padding:15px; font-size:16px; border-radius:10px; border:none; cursor:pointer; }
-.rojo { background:#dc2626; }
-.azul { background:#2563eb; }
-.verde { background:#16a34a; }
-.naranja { background:#f97316; }
-#footer { margin-top:30px; background:#1e293b; padding:12px; border-radius:12px; text-align:center; font-size:14px; line-height:1.4; }
-#formulario-vecino { position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px; z-index:9999; }
-#formulario-vecino input, #formulario-vecino select { padding:8px; border-radius:6px; border:none; width:200px; }
-#btn-super { position:fixed; top:10px; right:10px; background:#facc15; color:#000; border:none; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:12px; }
-#form-super { display:none; position:fixed; top:40px; right:10px; background:#1e293b; padding:10px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.3); width:180px; }
-#form-super input { display:block; margin:4px 0; padding:6px; border-radius:6px; border:none; width:100%; }
+  body {
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    padding: 20px;
+  }
+
+  h1 { margin-bottom: 20px; }
+
+  .botones {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  button {
+    padding: 16px;
+    font-size: 18px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+  }
+
+  .rojo { background: #dc2626; }
+  .azul { background: #2563eb; }
+  .verde { background: #16a34a; }
+  .amarillo { background: #facc15; }
+
+  footer {
+    margin-top: 20px;
+    padding: 10px;
+    background: #1e293b;
+    border-radius: 12px;
+  }
+
+  .super-btn {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+
+  .hidden { display: none; }
+  .form-container { background: #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+  .form-container input, .form-container select { width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 6px; border: none; }
 </style>
 </head>
 <body>
 
-<!-- FORMULARIO INSCRIPCION VECINO -->
-<div id="formulario-vecino">
-  <h2>Registro Vecino</h2>
-  <input type="text" id="nombre" placeholder="Nombre completo" required>
+<h1>🚨 Villa Segura</h1>
+
+<!-- FORMULARIO INSCRIPCIÓN -->
+<div id="formInscripcion" class="form-container">
+  <h2>Registro de Vecino</h2>
+  <input type="text" id="nombre" placeholder="Nombre" required>
   <input type="text" id="telefono" placeholder="Teléfono">
   <input type="text" id="direccion" placeholder="Dirección">
   <input type="text" id="casaDepto" placeholder="Casa / Depto">
-  <select id="villa" required><option>Cargando villas...</option></select>
-  <button id="guardar-vecino" class="verde">Guardar Datos</button>
+  <select id="villa">
+    <option value="">Selecciona Villa</option>
+  </select>
+  <button onclick="guardarVecino()">Registrar</button>
 </div>
 
-<!-- APP PRINCIPAL -->
-<div id="app">
-  <h1>🚨 Villa Segura</h1>
-
+<!-- INTERFAZ APP -->
+<div id="app" class="hidden">
   <div class="botones">
-    <button class="rojo" onclick="enviarAlerta('emergencia')">🚨 Emergencia</button>
-    <button class="azul" onclick="enviarAlerta('seguridad')">🛡 Seguridad</button>
-    <button class="verde" onclick="enviarAlerta('ambulancia')">🚑 Ambulancia</button>
-    <button class="naranja" onclick="enviarAlerta('bomberos')">🔥 Bomberos</button>
+    <button class="rojo" onclick="enviarAlerta('Emergencia')">🚨 Emergencia</button>
+    <button class="azul" onclick="enviarAlerta('Seguridad')">🛡 Seguridad</button>
+    <button class="verde" onclick="enviarAlerta('Ambulancia')">🚑 Ambulancia</button>
+    <button class="amarillo" onclick="enviarAlerta('Bomberos')">🔥 Bomberos</button>
   </div>
 
-  <div id="footer">Aún no hay datos</div>
+  <footer id="footer">
+    <div id="footerDatos">Aún no hay alertas</div>
+  </footer>
 </div>
 
-<!-- BOTON SUPER USUARIO -->
-<button id="btn-super">🔧</button>
-<div id="form-super">
-  <input type="password" id="clave-super" placeholder="Clave superusuario">
-  <input type="text" id="nueva-villa" placeholder="Nombre nueva villa">
-  <button id="guardar-villa" class="verde">Guardar Villa</button>
+<!-- BOTÓN SUPER USUARIO -->
+<button class="super-btn" onclick="toggleSuperForm()">Super Usuario</button>
+
+<div id="superForm" class="form-container hidden">
+  <h2>Agregar Villa</h2>
+  <input type="text" id="nuevaVilla" placeholder="Nombre de Villa">
+  <button onclick="agregarVilla()">Agregar</button>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
@@ -73,128 +112,104 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-let usuario = {};
+let usuario = null;
 
-// ===========================
-// Service Worker y token
-async function init() {
+// Cargar villas para el select
+async function cargarVillas() {
+  const res = await fetch("/villas");
+  const data = await res.json();
+  const select = document.getElementById("villa");
+  data.villas.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v; opt.textContent = v;
+    select.appendChild(opt);
+  });
+}
+
+cargarVillas();
+
+// Guardar vecino + token
+async function guardarVecino() {
+  const nombre = document.getElementById("nombre").value;
+  const telefono = document.getElementById("telefono").value;
+  const direccion = document.getElementById("direccion").value;
+  const casaDepto = document.getElementById("casaDepto").value;
+  const villa = document.getElementById("villa").value;
+
+  if (!nombre || !villa) return alert("Nombre y Villa obligatorios");
+
   try {
+    // Registrar SW
     const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-    console.log("✅ Service Worker registrado");
-
     const permiso = await Notification.requestPermission();
-    if (permiso !== "granted") { console.log("🔇 bloqueado"); return; }
+    if (permiso !== "granted") return alert("Permiso de notificación denegado");
 
     const token = await getToken(messaging, {
       vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
       serviceWorkerRegistration: registration
     });
 
-    usuario.token = token;
-    console.log("📱 TOKEN:", token);
-  } catch (error) { console.error("❌ Error init:", error); }
-}
-init();
+    usuario = { nombre, telefono, direccion, casaDepto, villa, token };
 
-// ===========================
-// CARGAR VILLAS
-async function cargarVillas() {
-  try {
-    const res = await fetch("/villas");
-    const data = await res.json();
-    const select = document.getElementById("villa");
-    select.innerHTML = '<option value="">Selecciona tu villa</option>';
-    data.villas.forEach(v => {
-      const opt = document.createElement("option");
-      opt.value = v; opt.textContent = v;
-      select.appendChild(opt);
-    });
-  } catch (error) { console.error(error); }
-}
-cargarVillas();
-
-// ===========================
-// GUARDAR DATOS VECINO
-document.getElementById("guardar-vecino").addEventListener("click", async () => {
-  usuario.nombre = document.getElementById("nombre").value.trim();
-  usuario.telefono = document.getElementById("telefono").value.trim();
-  usuario.direccion = document.getElementById("direccion").value.trim();
-  usuario.casaDepto = document.getElementById("casaDepto").value.trim();
-  usuario.villa = document.getElementById("villa").value;
-
-  if(!usuario.nombre || !usuario.villa) return alert("Nombre y villa son obligatorios");
-
-  try {
-    const res = await fetch("/guardar-token", {
+    await fetch("/guardar-token", {
       method: "POST",
-      headers: {"Content-Type":"application/json"},
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(usuario)
     });
-    const data = await res.json();
-    if(data.ok){
-      document.getElementById("formulario-vecino").style.display="none";
-      document.getElementById("app").style.display="block";
-      actualizarFooter();
-      alert("✅ Datos guardados");
-    }
-  } catch(err){ console.error(err); alert("❌ Error guardando datos"); }
-});
 
-// ===========================
-// ENVIAR ALERTA
-window.enviarAlerta = async (tipo) => {
-  if(!usuario.nombre) return alert("Debes registrarte primero");
+    document.getElementById("formInscripcion").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    actualizarFooter(usuario);
 
+    console.log("📱 Token guardado:", token);
+
+  } catch(e) { console.error(e); }
+}
+
+// Enviar alerta
+async function enviarAlerta(tipo) {
+  if (!usuario) return;
   try {
     const res = await fetch("/enviar-alerta", {
-      method:"POST",
-      headers: {"Content-Type":"application/json"},
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tipo, usuario })
     });
     const data = await res.json();
-    console.log("📡 Respuesta alerta:", data);
-    // Actualizar footer con quien presionó la alerta
-    actualizarFooter();
-  } catch(err){ console.error(err); }
-};
-
-// ===========================
-// FOOTER
-function actualizarFooter() {
-  const f = document.getElementById("footer");
-  f.innerHTML = `
-    <b>${usuario.nombre}</b><br>
-    ${usuario.direccion} / ${usuario.casaDepto}<br>
-    ${usuario.telefono || ""}<br>
-    Villa: ${usuario.villa}
-  `;
+    console.log("📡 Alerta enviada:", data);
+  } catch(e) { console.error(e); }
 }
 
-// ===========================
+// Actualizar footer con datos de alerta
+function actualizarFooter(datos) {
+  const f = document.getElementById("footerDatos");
+  f.textContent = `${datos.tipo || "ALERTA"} | ${datos.nombre} | ${datos.direccion} | ${datos.telefono} | ${datos.casaDepto} | ${datos.villa}`;
+}
+
+// Escuchar mensajes push mientras la app está abierta
+onMessage(messaging, (payload) => {
+  console.log("📩 Alerta recibida:", payload.data);
+  actualizarFooter(payload.data);
+});
+
 // SUPER USUARIO
-const btnSuper = document.getElementById("btn-super");
-const formSuper = document.getElementById("form-super");
-btnSuper.addEventListener("click", () => {
-  formSuper.style.display = formSuper.style.display==="none"?"block":"none";
-});
+function toggleSuperForm() {
+  document.getElementById("superForm").classList.toggle("hidden");
+}
 
-document.getElementById("guardar-villa").addEventListener("click", async () => {
-  const clave = document.getElementById("clave-super").value;
-  const villa = document.getElementById("nueva-villa").value.trim();
-  if(clave!=="Lukasm1996") return alert("Clave incorrecta");
-  if(!villa) return alert("Escribe un nombre válido");
+async function agregarVilla() {
+  const nombre = document.getElementById("nuevaVilla").value;
+  if (!nombre) return alert("Nombre obligatorio");
+  await fetch("/agregar-villa", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nombre })
+  });
+  alert("Villa agregada");
+  document.getElementById("nuevaVilla").value = "";
+  cargarVillas();
+}
 
-  try {
-    const res = await fetch("/agregar-villa", {
-      method:"POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ nombre:villa })
-    });
-    const data = await res.json();
-    if(data.ok){ alert("✅ Villa agregada"); document.getElementById("nueva-villa").value=""; cargarVillas(); }
-  } catch(err){ console.error(err); alert("❌ Error agregando villa"); }
-});
 </script>
-
 </body>
 </html>
