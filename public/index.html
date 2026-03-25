@@ -6,51 +6,16 @@
 <title>Villa Segura</title>
 
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #0f172a;
-    color: white;
-    text-align: center;
-    padding: 20px;
-  }
-
+  body { font-family: Arial, sans-serif; background: #0f172a; color: white; text-align: center; padding: 20px; }
   h1 { margin-bottom: 20px; }
-
-  .botones {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-
-  button {
-    padding: 16px;
-    font-size: 18px;
-    border-radius: 12px;
-    border: none;
-    cursor: pointer;
-  }
-
+  .botones { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+  button { padding: 16px; font-size: 18px; border-radius: 12px; border: none; cursor: pointer; }
   .rojo { background: #dc2626; }
   .azul { background: #2563eb; }
   .verde { background: #16a34a; }
   .amarillo { background: #facc15; }
-
-  footer {
-    margin-top: 20px;
-    padding: 10px;
-    background: #1e293b;
-    border-radius: 12px;
-  }
-
-  .super-btn {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    font-size: 14px;
-    padding: 6px 10px;
-  }
-
+  footer { margin-top: 20px; padding: 10px; background: #1e293b; border-radius: 12px; }
+  .super-btn { position: fixed; bottom: 10px; right: 10px; font-size: 14px; padding: 6px 10px; }
   .hidden { display: none; }
   .form-container { background: #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
   .form-container input, .form-container select { width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 6px; border: none; }
@@ -70,16 +35,16 @@
   <select id="villa">
     <option value="">Selecciona Villa</option>
   </select>
-  <button id="btnRegistrar" onclick="guardarVecino()">Registrar</button>
+  <button id="btnRegistrar">Registrar</button>
 </div>
 
 <!-- INTERFAZ APP -->
 <div id="app" class="hidden">
   <div class="botones">
-    <button class="rojo" onclick="enviarAlerta('Emergencia')">🚨 Emergencia</button>
-    <button class="azul" onclick="enviarAlerta('Seguridad')">🛡 Seguridad</button>
-    <button class="verde" onclick="enviarAlerta('Ambulancia')">🚑 Ambulancia</button>
-    <button class="amarillo" onclick="enviarAlerta('Bomberos')">🔥 Bomberos</button>
+    <button class="rojo">🚨 Emergencia</button>
+    <button class="azul">🛡 Seguridad</button>
+    <button class="verde">🚑 Ambulancia</button>
+    <button class="amarillo">🔥 Bomberos</button>
   </div>
 
   <footer id="footer">
@@ -88,12 +53,12 @@
 </div>
 
 <!-- BOTÓN SUPER USUARIO -->
-<button class="super-btn" onclick="toggleSuperForm()">Super Usuario</button>
+<button class="super-btn">Super Usuario</button>
 
 <div id="superForm" class="form-container hidden">
   <h2>Agregar Villa</h2>
   <input type="text" id="nuevaVilla" placeholder="Nombre de Villa">
-  <button onclick="agregarVilla()">Agregar</button>
+  <button>Agregar</button>
 </div>
 
 <script type="module">
@@ -114,7 +79,7 @@ const messaging = getMessaging(app);
 
 let usuario = null;
 
-// Cargar villas para el select
+// Cargar villas
 async function cargarVillas() {
   try {
     const res = await fetch("/villas");
@@ -131,12 +96,10 @@ async function cargarVillas() {
 
 cargarVillas();
 
-// Guardar vecino + token
+// Funciones principales
 async function guardarVecino() {
   const btn = document.getElementById("btnRegistrar");
-  btn.disabled = true;
-  btn.textContent = "Registrando...";
-
+  btn.disabled = true; btn.textContent = "Registrando...";
   const nombre = document.getElementById("nombre").value;
   const telefono = document.getElementById("telefono").value;
   const direccion = document.getElementById("direccion").value;
@@ -173,56 +136,31 @@ async function guardarVecino() {
     }
 
     usuario = { nombre, telefono, direccion, casaDepto, villa, token };
-
-    await fetch("/guardar-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(usuario)
-    });
+    await fetch("/guardar-token", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(usuario) });
 
     document.getElementById("formInscripcion").classList.add("hidden");
     document.getElementById("app").classList.remove("hidden");
     actualizarFooter(usuario);
 
-    console.log("📱 Token guardado:", token);
-
-  } catch(e) { 
-    console.error(e); 
-    alert("Error al registrar usuario");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Registrar";
-  }
+  } catch(e) { console.error(e); alert("Error al registrar usuario"); }
+  finally { btn.disabled = false; btn.textContent = "Registrar"; }
 }
 
-// Enviar alerta
 async function enviarAlerta(tipo) {
   if (!usuario) return;
   try {
     const payload = { tipo, usuario };
-    const res = await fetch("/enviar-alerta", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+    const res = await fetch("/enviar-alerta", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
     const data = await res.json();
     console.log("📡 Alerta enviada:", data);
   } catch(e) { console.error(e); }
 }
 
-// Actualizar footer con datos de alerta
 function actualizarFooter(datos) {
   const f = document.getElementById("footerDatos");
   f.textContent = `${datos.tipo || "ALERTA"} | ${datos.nombre} | ${datos.direccion} | ${datos.telefono} | ${datos.casaDepto} | ${datos.villa}`;
 }
 
-// Escuchar mensajes push mientras la app está abierta
-onMessage(messaging, (payload) => {
-  console.log("📩 Alerta recibida:", payload.data);
-  actualizarFooter(payload.data);
-});
-
-// SUPER USUARIO
 function toggleSuperForm() {
   document.getElementById("superForm").classList.toggle("hidden");
 }
@@ -230,15 +168,29 @@ function toggleSuperForm() {
 async function agregarVilla() {
   const nombre = document.getElementById("nuevaVilla").value;
   if (!nombre) return alert("Nombre obligatorio");
-  await fetch("/agregar-villa", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ nombre })
-  });
+  await fetch("/agregar-villa", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({nombre}) });
   alert("Villa agregada");
   document.getElementById("nuevaVilla").value = "";
   cargarVillas();
 }
+
+// ================================
+// 🔹 EXPORTAR FUNCIONES A WINDOW
+window.guardarVecino = guardarVecino;
+window.enviarAlerta = enviarAlerta;
+window.toggleSuperForm = toggleSuperForm;
+window.agregarVilla = agregarVilla;
+
+// ================================
+// BOTONES DE ALERTA
+document.querySelector(".rojo").addEventListener("click", () => enviarAlerta("Emergencia"));
+document.querySelector(".azul").addEventListener("click", () => enviarAlerta("Seguridad"));
+document.querySelector(".verde").addEventListener("click", () => enviarAlerta("Ambulancia"));
+document.querySelector(".amarillo").addEventListener("click", () => enviarAlerta("Bomberos"));
+document.querySelector(".super-btn").addEventListener("click", toggleSuperForm);
+
+// Escuchar mensajes push en primer plano
+onMessage(messaging, (payload) => { console.log("📩 Alerta recibida:", payload.data); actualizarFooter(payload.data); });
 </script>
 </body>
 </html>
