@@ -24,10 +24,14 @@ if (!admin.apps.length && serviceAccount) {
 }
 
 // ===============================
-// 🧠 MEMORIA DE VECINOS Y VILLAS
+// 🧠 MEMORIA DE TOKENS POR VILLA
 // ===============================
-let vecinos = []; // cada vecino: { nombre, telefono, direccion, casaDepto, villa, token }
-let villas = ["Villa Manzanares"]; // lista inicial de villas
+let vecinos = []; // {nombre, telefono, direccion, casaDepto, villa, token}
+
+// ===============================
+// 🏠 VILLAS DISPONIBLES
+// ===============================
+let villas = ["Villa Manzanares"];
 
 // ===============================
 // 📁 FRONTEND
@@ -42,64 +46,55 @@ app.get("/", (req, res) => {
 });
 
 // ===============================
-// 💾 GUARDAR TOKEN / DATOS VECINO
+// 💾 GUARDAR TOKEN + DATOS VECINO
 // ===============================
 app.post("/guardar-token", (req, res) => {
   const { nombre, telefono, direccion, casaDepto, villa, token } = req.body;
+
   if (!nombre || !villa || !token) {
-    return res.status(400).json({ error: "Nombre, villa y token son obligatorios" });
+    return res.status(400).json({ error: "Nombre, Villa y Token requeridos" });
   }
 
-  // Buscar vecino existente por token
-  const index = vecinos.findIndex(v => v.token === token);
-  if (index !== -1) {
-    vecinos[index] = { nombre, telefono, direccion, casaDepto, villa, token };
-    console.log("🔄 Vecino actualizado:", nombre);
-  } else {
+  const existing = vecinos.find(v => v.token === token);
+  if (!existing) {
     vecinos.push({ nombre, telefono, direccion, casaDepto, villa, token });
-    console.log("📱 Vecino registrado:", nombre);
+    console.log("📱 Vecino registrado:", nombre, "Villa:", villa);
   }
 
   res.json({ ok: true });
 });
 
 // ===============================
-// 🚨 ENVIAR ALERTA A VILLA ESPECIFICA
+// 🚨 ENVIAR ALERTA SOLO A VILLA
 // ===============================
 app.post("/enviar-alerta", async (req, res) => {
   try {
     const { tipo, usuario } = req.body;
 
-    if (!usuario || !usuario.villa) return res.status(400).json({ error: "Usuario o villa inválida" });
+    if (!usuario || !usuario.villa) {
+      return res.status(400).json({ error: "Usuario o Villa inválido" });
+    }
 
-    // Filtrar tokens de vecinos de la misma villa
-    const tokensVilla = vecinos
-      .filter(v => v.villa === usuario.villa)
-      .map(v => v.token);
+    const villaVecinos = vecinos.filter(v => v.villa === usuario.villa);
+    const tokens = villaVecinos.map(v => v.token);
 
-    if (tokensVilla.length === 0) return res.status(400).json({ error: "No hay dispositivos registrados en esta villa" });
+    if (tokens.length === 0) {
+      return res.status(400).json({ error: "No hay dispositivos registrados en la villa" });
+    }
 
     const mensaje = {
       notification: {
-        title: `🚨 ${tipo.toUpperCase()}`,
-        body: `${usuario.nombre} - ${usuario.direccion}`,
+        title: tipo,
+        body: `${usuario.nombre} - ${usuario.direccion}`
       },
-      data: {
-        nombre: usuario.nombre || "",
-        telefono: usuario.telefono || "",
-        direccion: usuario.direccion || "",
-        casaDepto: usuario.casaDepto || "",
-        villa: usuario.villa || "",
-        tipo: tipo || "",
-        sonido: "sirena",
-      },
-      tokens: tokensVilla,
+      data: usuario,
+      tokens: tokens
     };
 
     const response = await admin.messaging().sendEachForMulticast(mensaje);
-    console.log(`✅ Alertas enviadas (${usuario.villa}):`, response.successCount);
-    res.json({ ok: true });
+    console.log(`✅ Alertas enviadas a Villa ${usuario.villa}:`, response.successCount);
 
+    res.json({ ok: true });
   } catch (error) {
     console.error("❌ Error enviando alerta:", error);
     res.status(500).json({ error: error.message });
@@ -107,7 +102,7 @@ app.post("/enviar-alerta", async (req, res) => {
 });
 
 // ===============================
-// 📄 LISTA DE VILLAS
+// 📋 LISTAR VILLAS
 // ===============================
 app.get("/villas", (req, res) => {
   res.json({ villas });
@@ -118,11 +113,11 @@ app.get("/villas", (req, res) => {
 // ===============================
 app.post("/agregar-villa", (req, res) => {
   const { nombre } = req.body;
-  if (!nombre) return res.status(400).json({ error: "Nombre de villa obligatorio" });
+  if (!nombre) return res.status(400).json({ error: "Nombre obligatorio" });
 
   if (!villas.includes(nombre)) {
     villas.push(nombre);
-    console.log("🏘 Villa agregada:", nombre);
+    console.log("🏘 Nueva Villa agregada:", nombre);
   }
 
   res.json({ ok: true });
@@ -130,6 +125,4 @@ app.post("/agregar-villa", (req, res) => {
 
 // ===============================
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor en puerto ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Servidor corriendo en puerto ${PORT}`));
