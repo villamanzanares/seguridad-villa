@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Villa Segura</title>
-
-  <!-- Favicon opcional -->
   <link rel="icon" href="/favicon.png" type="image/png">
 
   <style>
@@ -48,9 +46,9 @@ const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
 // ---------------------
-// INIT: SW + Token con versionado
+// INIT: SW + Token con versionado automático
 // ---------------------
-const SW_VERSION = "v1.0.3";
+const SW_VERSION = Date.now(); // cambia cada carga para forzar registro nuevo
 
 async function init() {
   try {
