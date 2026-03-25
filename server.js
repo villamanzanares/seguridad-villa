@@ -1,12 +1,21 @@
 import express from "express";
 import cors from "cors";
 import admin from "firebase-admin";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 INICIALIZAR FIREBASE ADMIN
+// 🔥 RUTAS ABSOLUTAS (IMPORTANTE EN RENDER)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 👉 SERVIR CARPETA PUBLIC
+app.use(express.static(path.join(__dirname, "public")));
+
+// 🔥 FIREBASE ADMIN
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
 admin.initializeApp({
@@ -15,7 +24,7 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-// 🧠 ARRAY EN MEMORIA (puedes luego pasarlo a Firestore si quieres)
+// 🧠 TOKENS EN MEMORIA
 let tokens = [];
 
 // =======================================
@@ -24,13 +33,11 @@ let tokens = [];
 app.post("/guardar-token", (req, res) => {
   const { token } = req.body;
 
-  if (!token) {
-    return res.status(400).send("Token requerido");
-  }
+  if (!token) return res.status(400).send("Token requerido");
 
   if (!tokens.includes(token)) {
     tokens.push(token);
-    console.log("✅ Token guardado:", token);
+    console.log("✅ Token guardado");
   }
 
   res.send({ ok: true });
@@ -43,11 +50,7 @@ app.post("/enviar-alerta", async (req, res) => {
   try {
     const { tipo, nombre, direccion } = req.body;
 
-    if (!tipo || !nombre || !direccion) {
-      return res.status(400).send("Faltan datos");
-    }
-
-    // 🔥 1. GUARDAR EN FIRESTORE (TIEMPO REAL)
+    // 🔥 GUARDAR EN FIRESTORE
     await db.collection("alertas").add({
       tipo,
       nombre,
@@ -55,7 +58,7 @@ app.post("/enviar-alerta", async (req, res) => {
       timestamp: new Date()
     });
 
-    // 🔔 2. ENVIAR PUSH
+    // 🔔 PUSH
     if (tokens.length > 0) {
       const message = {
         notification: {
@@ -65,30 +68,23 @@ app.post("/enviar-alerta", async (req, res) => {
         tokens: tokens
       };
 
-      const response = await admin.messaging().sendEachForMulticast(message);
-      console.log("📩 Notificaciones enviadas:", response.successCount);
-    } else {
-      console.log("⚠️ No hay tokens registrados");
+      await admin.messaging().sendEachForMulticast(message);
     }
 
     res.send({ ok: true });
 
   } catch (error) {
-    console.error("❌ Error:", error);
-    res.status(500).send("Error interno");
+    console.error(error);
+    res.status(500).send("Error");
   }
 });
 
-// =======================================
-// 🌐 RUTA TEST
-// =======================================
-app.get("/", (req, res) => {
-  res.send("🚀 Servidor Villa Segura activo");
+// 👉 ESTA LÍNEA HACE QUE / CARGUE TU INDEX.HTML
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
-// =======================================
-// 🚀 LEVANTAR SERVIDOR
-// =======================================
+// 🚀 START
 const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
