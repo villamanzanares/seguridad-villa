@@ -46,14 +46,20 @@ app.post("/guardar-token", async (req, res) => {
   } catch (error) { console.error("❌ Error guardar-token:", error); res.status(500).json({ error: error.message }); }
 });
 
-// ENVIAR ALERTA A TODOS LOS VECINOS
+// ENVIAR ALERTA SOLO A VECINOS DE LA MISMA VILLA
 app.post("/enviar-alerta", async (req, res) => {
   try {
     const { tipo, usuario } = req.body;
-    const vecinosSnap = await db.collection("vecinos").get();
-    if (vecinosSnap.empty) return res.status(400).json({ error: "No hay vecinos registrados" });
+    if (!usuario.villa) return res.status(400).json({ error: "Villa no definida" });
+
+    const vecinosSnap = await db.collection("vecinos")
+      .where("villa", "==", usuario.villa)
+      .get();
+
+    if (vecinosSnap.empty) return res.status(400).json({ error: "No hay vecinos registrados en esta villa" });
 
     const tokens = vecinosSnap.docs.map(doc => doc.data().token);
+
     const mensaje = {
       notification: {
         title: `🚨 ${tipo.toUpperCase()}`,
@@ -64,7 +70,8 @@ app.post("/enviar-alerta", async (req, res) => {
     };
 
     const response = await admin.messaging().sendEachForMulticast(mensaje);
-    console.log(`✅ Alertas enviadas: ${response.successCount} de ${tokens.length}`);
+    console.log(`✅ Alertas enviadas: ${response.successCount} de ${tokens.length} vecinos de ${usuario.villa}`);
+
     res.json({ ok: true });
   } catch (error) { console.error("❌ Error enviar-alerta:", error); res.status(500).json({ error: error.message }); }
 });
