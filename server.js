@@ -8,7 +8,7 @@ app.use(express.json());
 
 // 🔥 CONFIG FIREBASE DESDE VARIABLES DE ENTORNO
 try {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
