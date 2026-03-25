@@ -58,7 +58,7 @@
 <div id="superForm" class="form-container hidden">
   <h2>Agregar Villa</h2>
   <input type="text" id="nuevaVilla" placeholder="Nombre de Villa">
-  <button>Agregar</button>
+  <button id="btnAgregarVilla">Agregar</button>
 </div>
 
 <script type="module">
@@ -175,22 +175,20 @@ async function agregarVilla() {
 }
 
 // ================================
-// 🔹 EXPORTAR FUNCIONES A WINDOW
-window.guardarVecino = guardarVecino;
-window.enviarAlerta = enviarAlerta;
-window.toggleSuperForm = toggleSuperForm;
-window.agregarVilla = agregarVilla;
-
-// ================================
-// BOTONES DE ALERTA
+// EVENT LISTENERS
+document.getElementById("btnRegistrar").addEventListener("click", guardarVecino);
 document.querySelector(".rojo").addEventListener("click", () => enviarAlerta("Emergencia"));
 document.querySelector(".azul").addEventListener("click", () => enviarAlerta("Seguridad"));
 document.querySelector(".verde").addEventListener("click", () => enviarAlerta("Ambulancia"));
 document.querySelector(".amarillo").addEventListener("click", () => enviarAlerta("Bomberos"));
 document.querySelector(".super-btn").addEventListener("click", toggleSuperForm);
+document.getElementById("btnAgregarVilla").addEventListener("click", agregarVilla);
 
-// Escuchar mensajes push en primer plano
-onMessage(messaging, (payload) => { console.log("📩 Alerta recibida:", payload.data); actualizarFooter(payload.data); });
+// Mensajes push en primer plano
+onMessage(messaging, (payload) => { 
+  console.log("📩 Alerta recibida:", payload.data); 
+  actualizarFooter(payload.data); 
+});
 </script>
 </body>
 </html>
