@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 // 🔥 INICIALIZAR FIREBASE ADMIN
-const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
