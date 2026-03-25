@@ -1,17 +1,3 @@
-// firebase-messaging-sw.js
-
-const VERSION = Date.now(); // cambia cada deploy
-
-self.addEventListener("install", (event) => {
-  console.log(`SW install ${VERSION}`);
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", (event) => {
-  console.log(`SW activate ${VERSION}`);
-  clients.claim();
-});
-
 importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging-compat.js");
 
@@ -29,17 +15,17 @@ const messaging = firebase.messaging();
 self.addEventListener("push", (event) => {
   if (!event.data) return;
   const data = event.data.json();
-  const titulo = data.notification?.title || "🚨 ALERTIA";
-  const cuerpo = data.notification?.body || "Nueva alerta vecinal";
+  const titulo = data.notification?.title || "🚨 ALERTA";
+  const cuerpo = data.notification?.body || "Nueva alerta";
 
   event.waitUntil(
     self.registration.showNotification(titulo, {
       body: cuerpo,
       icon: "/icon.png",
       badge: "/icon.png",
-      vibrate: [300,100,300,100,500],
+      vibrate: [300, 100, 300, 100, 500],
       requireInteraction: true,
-      data: data
+      data
     })
   );
 });
@@ -47,8 +33,8 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type:"window", includeUncontrolled:true }).then(clientList => {
-      for (const client of clientList) { if (client.url.includes("/") && "focus" in client) return client.focus(); }
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) if (client.url.includes("/") && "focus" in client) return client.focus();
       return clients.openWindow("/");
     })
   );
