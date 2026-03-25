@@ -9,39 +9,43 @@
 <style>
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: Arial;
 }
 
-#footer-alerta {
+#footer {
   position: fixed;
   bottom: 0;
   width: 100%;
-  background: #111;
+  background: black;
   color: white;
   padding: 15px;
   text-align: center;
-  font-size: 16px;
 }
 
-.alerta {
-  font-weight: bold;
-  color: #ff4444;
+button {
+  width: 90%;
+  padding: 15px;
+  margin: 10px;
+  font-size: 16px;
 }
 </style>
 </head>
 
 <body>
 
-<h2 style="text-align:center;">Villa Segura</h2>
+<h2 style="text-align:center;">🚨 Villa Segura</h2>
 
-<div id="footer-alerta">
-  Esperando alertas...
+<div style="text-align:center;">
+  <button onclick="enviarAlerta('Emergencia')">Emergencia</button>
+  <button onclick="enviarAlerta('Robo')">Robo</button>
 </div>
+
+<div id="footer">Esperando alertas...</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+import { getFirestore, collection, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
@@ -56,33 +60,42 @@ const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 const db = getFirestore(app);
 
-// 🔔 Registrar Service Worker
+// 🔔 SERVICE WORKER
 navigator.serviceWorker.register("/firebase-messaging-sw.js")
-.then((registration) => {
-
+.then(registration => {
   getToken(messaging, {
     vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
     serviceWorkerRegistration: registration
-  })
-  .then((currentToken) => {
-    if (currentToken) {
-      console.log("Token:", currentToken);
-
-      // enviar token a tu backend
+  }).then(token => {
+    if (token) {
       fetch("/guardar-token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ token: currentToken })
+        body: JSON.stringify({ token })
       });
     }
   });
-
 });
 
-// 🔥 ESCUCHA EN TIEMPO REAL (LA CLAVE DEL PROBLEMA)
-const footer = document.getElementById("footer-alerta");
+// 🚨 ENVIAR ALERTA
+window.enviarAlerta = async (tipo) => {
+  await fetch("/enviar-alerta", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      tipo,
+      nombre: "Vecino",
+      direccion: "Casa X"
+    })
+  });
+};
+
+// 🔥 TIEMPO REAL
+const footer = document.getElementById("footer");
 
 const q = query(
   collection(db, "alertas"),
@@ -91,22 +104,16 @@ const q = query(
 );
 
 onSnapshot(q, (snapshot) => {
-  snapshot.forEach((doc) => {
+  snapshot.forEach(doc => {
     const data = doc.data();
 
     footer.innerHTML = `
-      🚨 <span class="alerta">${data.tipo}</span><br>
-      👤 ${data.nombre}<br>
+      🚨 ${data.tipo} <br>
+      👤 ${data.nombre} <br>
       📍 ${data.direccion}
     `;
   });
 });
-
-// 📩 Mensaje en primer plano (opcional)
-onMessage(messaging, (payload) => {
-  console.log("Mensaje recibido:", payload);
-});
-
 </script>
 
 </body>
