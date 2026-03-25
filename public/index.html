@@ -5,28 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Villa Segura</title>
 <style>
-body { font-family: Arial, sans-serif; background:#0f172a; color:white; text-align:center; padding:20px; }
-h1 { margin-bottom:30px; }
-.botones { display:flex; flex-direction:column; gap:15px; margin-bottom:20px; }
-button { padding:20px; font-size:18px; border-radius:12px; border:none; cursor:pointer; }
+body { font-family: Arial, sans-serif; background:#0f172a; color:white; text-align:center; padding:0; margin:0;}
+#app { display:none; padding:20px; }
+h1 { margin-bottom:20px; }
+.botones { display:flex; flex-direction:column; gap:12px; margin-bottom:20px; }
+button { padding:15px; font-size:16px; border-radius:10px; border:none; cursor:pointer; }
 .rojo { background:#dc2626; }
 .azul { background:#2563eb; }
 .verde { background:#16a34a; }
 .naranja { background:#f97316; }
-#footer { margin-top:30px; background:#1e293b; padding:12px; border-radius:12px; text-align:center; font-size:16px; line-height:1.4; }
-#formulario-vecino { margin-bottom:20px; }
-#formulario-vecino input, #formulario-vecino select { padding:8px; margin:4px; border-radius:6px; border:none; }
-#btn-super { position:fixed; top:10px; right:10px; background:#facc15; color:#000; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
-#form-super { display:none; position:fixed; top:50px; right:10px; background:#1e293b; padding:15px; border-radius:12px; box-shadow:0 4px 8px rgba(0,0,0,0.3); }
+#footer { margin-top:30px; background:#1e293b; padding:12px; border-radius:12px; text-align:center; font-size:14px; line-height:1.4; }
+#formulario-vecino { position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:8px; z-index:9999; }
+#formulario-vecino input, #formulario-vecino select { padding:8px; border-radius:6px; border:none; width:200px; }
+#btn-super { position:fixed; top:10px; right:10px; background:#facc15; color:#000; border:none; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:12px; }
+#form-super { display:none; position:fixed; top:40px; right:10px; background:#1e293b; padding:10px; border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.3); width:180px; }
 #form-super input { display:block; margin:4px 0; padding:6px; border-radius:6px; border:none; width:100%; }
 </style>
 </head>
 <body>
 
-<h1>🚨 Villa Segura</h1>
-
 <!-- FORMULARIO INSCRIPCION VECINO -->
 <div id="formulario-vecino">
+  <h2>Registro Vecino</h2>
   <input type="text" id="nombre" placeholder="Nombre completo" required>
   <input type="text" id="telefono" placeholder="Teléfono">
   <input type="text" id="direccion" placeholder="Dirección">
@@ -35,19 +35,22 @@ button { padding:20px; font-size:18px; border-radius:12px; border:none; cursor:p
   <button id="guardar-vecino" class="verde">Guardar Datos</button>
 </div>
 
-<!-- BOTONES DE ALERTA -->
-<div class="botones">
-  <button class="rojo" onclick="enviarAlerta('emergencia')">🚨 Emergencia</button>
-  <button class="azul" onclick="enviarAlerta('seguridad')">🛡 Seguridad</button>
-  <button class="verde" onclick="enviarAlerta('ambulancia')">🚑 Ambulancia</button>
-  <button class="naranja" onclick="enviarAlerta('bomberos')">🔥 Bomberos</button>
+<!-- APP PRINCIPAL -->
+<div id="app">
+  <h1>🚨 Villa Segura</h1>
+
+  <div class="botones">
+    <button class="rojo" onclick="enviarAlerta('emergencia')">🚨 Emergencia</button>
+    <button class="azul" onclick="enviarAlerta('seguridad')">🛡 Seguridad</button>
+    <button class="verde" onclick="enviarAlerta('ambulancia')">🚑 Ambulancia</button>
+    <button class="naranja" onclick="enviarAlerta('bomberos')">🔥 Bomberos</button>
+  </div>
+
+  <div id="footer">Aún no hay datos</div>
 </div>
 
-<!-- FOOTER DATOS -->
-<div id="footer">Aún no hay datos</div>
-
 <!-- BOTON SUPER USUARIO -->
-<button id="btn-super">🔧 Super Usuario</button>
+<button id="btn-super">🔧</button>
 <div id="form-super">
   <input type="password" id="clave-super" placeholder="Clave superusuario">
   <input type="text" id="nueva-villa" placeholder="Nombre nueva villa">
@@ -130,6 +133,7 @@ document.getElementById("guardar-vecino").addEventListener("click", async () => 
     const data = await res.json();
     if(data.ok){
       document.getElementById("formulario-vecino").style.display="none";
+      document.getElementById("app").style.display="block";
       actualizarFooter();
       alert("✅ Datos guardados");
     }
@@ -149,6 +153,8 @@ window.enviarAlerta = async (tipo) => {
     });
     const data = await res.json();
     console.log("📡 Respuesta alerta:", data);
+    // Actualizar footer con quien presionó la alerta
+    actualizarFooter();
   } catch(err){ console.error(err); }
 };
 
@@ -168,12 +174,14 @@ function actualizarFooter() {
 // SUPER USUARIO
 const btnSuper = document.getElementById("btn-super");
 const formSuper = document.getElementById("form-super");
-btnSuper.addEventListener("click", () => formSuper.style.display = formSuper.style.display==="none"?"block":"none");
+btnSuper.addEventListener("click", () => {
+  formSuper.style.display = formSuper.style.display==="none"?"block":"none";
+});
 
 document.getElementById("guardar-villa").addEventListener("click", async () => {
   const clave = document.getElementById("clave-super").value;
   const villa = document.getElementById("nueva-villa").value.trim();
-  if(clave!=="Lumasm1996") return alert("Clave incorrecta");
+  if(clave!=="MiClaveSuperSecreta") return alert("Clave incorrecta");
   if(!villa) return alert("Escribe un nombre válido");
 
   try {
