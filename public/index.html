@@ -14,32 +14,28 @@
       padding: 20px;
     }
 
-    h1 { margin-bottom: 30px; }
+    h1 { margin-bottom: 20px; }
 
-    .botones {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-      max-width: 300px;
-      margin: 0 auto 30px;
+    form, .botones, footer { max-width: 400px; margin: 20px auto; }
+
+    input, select, button { 
+      width: 100%; 
+      padding: 12px; 
+      margin: 8px 0; 
+      border-radius: 8px; 
+      border: none; 
+      font-size: 16px; 
     }
 
-    button {
-      padding: 20px;
-      font-size: 18px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
+    button { cursor: pointer; font-weight: bold; }
 
-    .rojo { background: #dc2626; }
-    .azul { background: #2563eb; }
-    .verde { background: #16a34a; }
-    .naranja { background: #f97316; }
+    .rojo { background: #dc2626; color: white; }
+    .azul { background: #2563eb; color: white; }
+    .verde { background: #16a34a; color: white; }
+    .naranja { background: #f97316; color: white; }
 
     footer {
-      margin-top: 40px;
+      margin-top: 30px;
       padding: 20px;
       border-top: 2px solid #374151;
       text-align: center;
@@ -50,25 +46,40 @@
     footer div { margin: 6px 0; font-size: 16px; }
     footer .tipo { font-weight: bold; font-size: 18px; color: #facc15; }
     footer .nombre { font-weight: bold; color: #34d399; }
-    footer .direccion, footer .telefono { color: #60a5fa; }
+    footer .direccion, footer .telefono, footer .villa { color: #60a5fa; }
   </style>
 </head>
-
 <body>
 <h1>🚨 Villa Segura</h1>
 
-<div class="botones">
-  <button class="rojo" onclick="enviarAlerta('emergencia', 'Dispositivo1')">🚨 Emergencia</button>
-  <button class="azul" onclick="enviarAlerta('seguridad', 'Dispositivo1')">🛡 Seguridad</button>
-  <button class="verde" onclick="enviarAlerta('ambulancia', 'Dispositivo1')">🚑 Ambulancia</button>
-  <button class="naranja" onclick="enviarAlerta('bomberos', 'Dispositivo1')">🔥 Bomberos</button>
+<!-- FORMULARIO DE INSCRIPCIÓN -->
+<form id="form-inscripcion">
+  <input type="text" id="nombre" placeholder="Nombre" required>
+  <input type="tel" id="telefono" placeholder="Teléfono" required>
+  <input type="text" id="direccion" placeholder="Dirección" required>
+  <input type="text" id="casaDepto" placeholder="Casa / Depto" required>
+  <select id="villa" required>
+    <option value="">Selecciona tu villa</option>
+    <option value="Villa Manzanares">Villa Manzanares</option>
+  </select>
+  <button type="submit" class="verde">Guardar Datos</button>
+</form>
+
+<!-- BOTONES DE ALERTA -->
+<div class="botones" id="botones-alerta" style="display:none;">
+  <button class="rojo" onclick="enviarAlerta('emergencia')">🚨 Emergencia</button>
+  <button class="azul" onclick="enviarAlerta('seguridad')">🛡 Seguridad</button>
+  <button class="verde" onclick="enviarAlerta('ambulancia')">🚑 Ambulancia</button>
+  <button class="naranja" onclick="enviarAlerta('bomberos')">🔥 Bomberos</button>
 </div>
 
+<!-- FOOTER -->
 <footer id="footer-info">
   <div class="tipo">Tipo de Emergencia: -</div>
   <div class="nombre">Nombre: -</div>
   <div class="direccion">Dirección: -</div>
   <div class="telefono">Teléfono: -</div>
+  <div class="villa">Villa: -</div>
 </footer>
 
 <script type="module">
@@ -87,6 +98,8 @@
   const app = initializeApp(firebaseConfig);
   const messaging = getMessaging(app);
 
+  let usuario = null; // Datos del vecino
+
   async function init() {
     try {
       const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
@@ -102,36 +115,82 @@
 
       console.log("📱 TOKEN:", token);
 
-      await fetch("/guardar-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, nombre: "Dispositivo1" })
-      });
+      // Revisar si hay datos en localStorage
+      const datosGuardados = localStorage.getItem("vecino");
+      if (datosGuardados) {
+        usuario = JSON.parse(datosGuardados);
+        document.getElementById("form-inscripcion").style.display = "none";
+        document.getElementById("botones-alerta").style.display = "block";
+      }
+
+      // Guardar token en backend junto con datos si ya existe usuario
+      if (usuario) {
+        await fetch("/guardar-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, ...usuario })
+        });
+      }
+
+      // Guardar token temporalmente en usuario para inscripción futura
+      usuario = usuario || { token };
 
     } catch (error) { console.error("❌ Error init:", error); }
   }
 
   init();
 
-  window.enviarAlerta = async (tipo, dispositivo = "Desconocido") => {
-    try {
-      console.log(`⚡ Enviando alerta desde: ${dispositivo}`);
+  // FORMULARIO DE INSCRIPCIÓN
+  document.getElementById("form-inscripcion").addEventListener("submit", async (e) => {
+    e.preventDefault();
 
+    usuario = {
+      nombre: document.getElementById("nombre").value,
+      telefono: document.getElementById("telefono").value,
+      direccion: document.getElementById("direccion").value,
+      casaDepto: document.getElementById("casaDepto").value,
+      villa: document.getElementById("villa").value,
+      token: usuario.token
+    };
+
+    // Guardar en localStorage
+    localStorage.setItem("vecino", JSON.stringify(usuario));
+
+    // Ocultar formulario y mostrar botones
+    document.getElementById("form-inscripcion").style.display = "none";
+    document.getElementById("botones-alerta").style.display = "block";
+
+    // Guardar en backend
+    await fetch("/guardar-token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(usuario)
+    });
+
+    console.log("✅ Datos guardados y usuario listo");
+  });
+
+  // FUNCION PARA ENVIAR ALERTA
+  window.enviarAlerta = async (tipo) => {
+    if (!usuario) return alert("Usuario no registrado");
+
+    try {
       const res = await fetch("/enviar-alerta", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tipo, dispositivo })
+        body: JSON.stringify({ tipo, usuario })
       });
 
       const data = await res.json();
       console.log("📡 Respuesta alerta:", data);
 
-      // Actualizar footer con datos (simulados o enviados desde backend)
+      // Actualizar footer
       const footer = document.getElementById("footer-info");
       footer.querySelector(".tipo").textContent = `Tipo de Emergencia: ${tipo}`;
-      footer.querySelector(".nombre").textContent = `Nombre: ${dispositivo}`;
-      footer.querySelector(".direccion").textContent = `Dirección: Calle Falsa 123`;
-      footer.querySelector(".telefono").textContent = `Teléfono: +56 9 1234 5678`;
+      footer.querySelector(".nombre").textContent = `Nombre: ${usuario.nombre}`;
+      footer.querySelector(".direccion").textContent = `Dirección: ${usuario.direccion} / ${usuario.casaDepto}`;
+      footer.querySelector(".telefono").textContent = `Teléfono: ${usuario.telefono}`;
+      footer.querySelector(".villa").textContent = `Villa: ${usuario.villa}`;
 
     } catch (error) { console.error("❌ Error enviando alerta:", error); }
   };
