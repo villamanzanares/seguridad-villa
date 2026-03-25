@@ -3,39 +3,60 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Villa Segura</title>
+<title>ALERTIA</title>
 
 <style>
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #0f172a;
+  background: #0B1F3A;
   color: white;
   text-align: center;
 }
 
+/* HEADER */
 header {
-  background: #020617;
-  padding: 20px;
-  font-size: 22px;
-  font-weight: bold;
+  padding: 30px 20px 10px;
 }
 
+header img {
+  width: 80px;
+  margin-bottom: 10px;
+}
+
+.sub {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+/* BOTONES */
 .container {
   padding: 20px;
+  margin-top: 10px;
 }
 
 .btn {
   display: block;
   width: 90%;
   max-width: 400px;
-  margin: 10px auto;
+  margin: 12px auto;
   padding: 20px;
   font-size: 18px;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   color: white;
   cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn:active {
+  transform: scale(0.95);
 }
 
 .robo { background: #dc2626; }
@@ -43,13 +64,15 @@ header {
 .sos { background: #2563eb; }
 .test { background: #16a34a; }
 
+/* FOOTER */
 footer {
   position: fixed;
   bottom: 0;
   width: 100%;
-  background: #020617;
+  background: #09162b;
   padding: 15px;
   font-size: 14px;
+  line-height: 1.4;
 }
 </style>
 </head>
@@ -57,8 +80,10 @@ footer {
 <body>
 
 <header>
-🏡 VILLA SEGURA<br>
-<span style="font-size:14px;">Alertas Vecinales</span>
+  <!-- puedes agregar logo.png después -->
+  <!-- <img src="logo.png"> -->
+  <div class="sub">Alerta Vecinal</div>
+  <div class="title">🚨 ALERTIA</div>
 </header>
 
 <div class="container">
@@ -71,6 +96,9 @@ footer {
 <footer id="footer">
 Esperando alertas...
 </footer>
+
+<!-- 🔊 SONIDO -->
+<audio id="sirena" src="sirena.mp3" preload="auto"></audio>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -90,18 +118,23 @@ const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 const db = getFirestore(app);
 
-// 🔔 TOKEN
+const footer = document.getElementById("footer");
+const sirena = document.getElementById("sirena");
+
+// 🔔 TOKEN + SW
 navigator.serviceWorker.register('/firebase-messaging-sw.js').then(async (reg) => {
   const token = await getToken(messaging, {
     vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
     serviceWorkerRegistration: reg
   });
 
-  await fetch('/guardar-token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token })
-  });
+  if (token) {
+    await fetch('/guardar-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+  }
 });
 
 // 🚀 ENVIAR ALERTA
@@ -123,25 +156,41 @@ window.enviarAlerta = async (tipo) => {
   });
 };
 
-// 👁️ TIEMPO REAL (AQUÍ ESTABA EL PROBLEMA)
+// 👁️ TIEMPO REAL (🔥 CLAVE)
 const q = query(collection(db, "alertas"), orderBy("fecha", "desc"), limit(1));
 
 onSnapshot(q, (snapshot) => {
   snapshot.forEach((doc) => {
     const data = doc.data();
 
-    document.getElementById("footer").innerHTML = `
+    footer.innerHTML = `
       🚨 <b>${data.tipo}</b><br>
       👤 ${data.nombre}<br>
       📞 ${data.telefono}<br>
       📍 ${data.direccion}
     `;
+
+    // 🔊 SONIDO CUANDO CAMBIA ALERTA
+    sirena.currentTime = 0;
+    sirena.play().catch(()=>{});
   });
 });
 
-// 📩 MENSAJES EN PRIMER PLANO
+// 📩 PUSH EN PRIMER PLANO
 onMessage(messaging, (payload) => {
   console.log("Mensaje recibido:", payload);
+
+  const data = payload.data || {};
+
+  footer.innerHTML = `
+    🚨 <b>${data.tipo || 'ALERTA'}</b><br>
+    👤 ${data.nombre || 'Vecino'}<br>
+    📞 ${data.telefono || 'Sin teléfono'}<br>
+    📍 ${data.direccion || 'Sin dirección'}
+  `;
+
+  sirena.currentTime = 0;
+  sirena.play().catch(()=>{});
 });
 </script>
 
