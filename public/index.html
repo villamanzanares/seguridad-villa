@@ -1,125 +1,149 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Villa Segura</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Villa Segura</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: white;
+  text-align: center;
+}
+
+header {
+  background: #020617;
+  padding: 20px;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.container {
+  padding: 20px;
+}
+
+.btn {
+  display: block;
+  width: 90%;
+  max-width: 400px;
+  margin: 10px auto;
+  padding: 20px;
+  font-size: 18px;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+}
+
+.robo { background: #dc2626; }
+.emergencia { background: #ea580c; }
+.sos { background: #2563eb; }
+.test { background: #16a34a; }
+
+footer {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #020617;
+  padding: 15px;
+  font-size: 14px;
+}
+</style>
 </head>
+
 <body>
 
-  <h1>Villa Segura - Alertas Vecinales</h1>
+<header>
+🏡 VILLA SEGURA<br>
+<span style="font-size:14px;">Alertas Vecinales</span>
+</header>
 
-  <div id="botones">
-    <button class="alerta" data-tipo="EMERGENCIA">EMERGENCIA</button>
-    <button class="alerta" data-tipo="ROBO">ROBO</button>
-    <button class="alerta" data-tipo="INCENDIO">INCENDIO</button>
-    <button class="alerta" data-tipo="ASISTENCIA">ASISTENCIA</button>
-  </div>
+<div class="container">
+  <button class="btn robo" onclick="enviarAlerta('ROBO')">🚨 ROBO</button>
+  <button class="btn emergencia" onclick="enviarAlerta('EMERGENCIA')">🔥 EMERGENCIA</button>
+  <button class="btn sos" onclick="enviarAlerta('SOS')">🆘 SOS</button>
+  <button class="btn test" onclick="enviarAlerta('TEST')">✅ TEST</button>
+</div>
 
-  <footer id="footer">Estado: listo ✅</footer>
+<footer id="footer">
+Esperando alertas...
+</footer>
 
-  <audio id="sirena" src="sirena.mp3"></audio>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
-    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging.js";
-    import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+  authDomain: "alerta-rosko.firebaseapp.com",
+  projectId: "alerta-rosko",
+  storageBucket: "alerta-rosko.firebasestorage.app",
+  messagingSenderId: "1022811358317",
+  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+};
 
-    // 🔥 CONFIG
-    const firebaseConfig = {
-      apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-      authDomain: "alerta-rosko.firebaseapp.com",
-      projectId: "alerta-rosko",
-      storageBucket: "alerta-rosko.firebasestorage.app",
-      messagingSenderId: "1022811358317",
-      appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-    };
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+const db = getFirestore(app);
 
-    const app = initializeApp(firebaseConfig);
-    const messaging = getMessaging(app);
-    const db = getFirestore(app);
+// 🔔 TOKEN
+navigator.serviceWorker.register('/firebase-messaging-sw.js').then(async (reg) => {
+  const token = await getToken(messaging, {
+    vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+    serviceWorkerRegistration: reg
+  });
 
-    const footer = document.getElementById("footer");
-    const sirena = document.getElementById("sirena");
+  await fetch('/guardar-token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token })
+  });
+});
 
-    // 🧠 DATOS DEL USUARIO (puedes cambiarlos después por login)
-    const nombre = localStorage.getItem("nombre") || "Vecino";
-    const telefono = localStorage.getItem("telefono") || "Sin teléfono";
-    const direccion = localStorage.getItem("direccion") || "Sin dirección";
+// 🚀 ENVIAR ALERTA
+window.enviarAlerta = async (tipo) => {
+  const datos = {
+    tipo,
+    nombre: "Vecino",
+    telefono: "123456789",
+    direccion: "Casa X",
+    fecha: new Date()
+  };
 
-    // 🔔 SERVICE WORKER + TOKEN
-    navigator.serviceWorker.register("/firebase-messaging-sw.js")
-    .then(registration => {
-      getToken(messaging, {
-        vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-        serviceWorkerRegistration: registration
-      }).then(token => {
-        if (token) {
-          fetch("/guardar-token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token })
-          });
-        }
-      });
-    });
+  await addDoc(collection(db, "alertas"), datos);
 
-    // 📲 MENSAJE EN PRIMER PLANO
-    onMessage(messaging, (payload) => {
-      console.log("Push recibido:", payload);
-      sirena.play().catch(()=>{});
-    });
+  await fetch('/enviar-alerta', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(datos)
+  });
+};
 
-    // 🚨 BOTONES
-    document.querySelectorAll(".alerta").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const tipo = btn.dataset.tipo;
+// 👁️ TIEMPO REAL (AQUÍ ESTABA EL PROBLEMA)
+const q = query(collection(db, "alertas"), orderBy("fecha", "desc"), limit(1));
 
-        try {
-          await fetch("/enviar-alerta", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              tipo,
-              nombre,
-              telefono,
-              direccion
-            })
-          });
+onSnapshot(q, (snapshot) => {
+  snapshot.forEach((doc) => {
+    const data = doc.data();
 
-          footer.textContent = `Alerta enviada: ${tipo} ✅`;
+    document.getElementById("footer").innerHTML = `
+      🚨 <b>${data.tipo}</b><br>
+      👤 ${data.nombre}<br>
+      📞 ${data.telefono}<br>
+      📍 ${data.direccion}
+    `;
+  });
+});
 
-        } catch (err) {
-          footer.textContent = "Error al enviar alerta ❌";
-          console.error(err);
-        }
-      });
-    });
-
-    // 🔥 TIEMPO REAL (LA MAGIA)
-    const q = query(
-      collection(db, "alertas"),
-      orderBy("timestamp", "desc"),
-      limit(1)
-    );
-
-    onSnapshot(q, (snapshot) => {
-      snapshot.forEach(doc => {
-        const data = doc.data();
-
-        footer.innerHTML = `
-          🚨 ${data.tipo} <br>
-          👤 ${data.nombre} <br>
-          📞 ${data.telefono} <br>
-          📍 ${data.direccion}
-        `;
-
-        sirena.play().catch(()=>{});
-      });
-    });
-
-  </script>
+// 📩 MENSAJES EN PRIMER PLANO
+onMessage(messaging, (payload) => {
+  console.log("Mensaje recibido:", payload);
+});
+</script>
 
 </body>
 </html>
