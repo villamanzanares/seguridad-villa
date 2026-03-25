@@ -122,20 +122,36 @@ const footer = document.getElementById("footer");
 const sirena = document.getElementById("sirena");
 
 // 🔔 TOKEN + SW
-navigator.serviceWorker.register('/firebase-messaging-sw.js').then(async (reg) => {
-  const token = await getToken(messaging, {
-    vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-    serviceWorkerRegistration: reg
-  });
+const registrarSWyToken = async () => {
+  try {
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
 
-  if (token) {
-    await fetch('/guardar-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
+    // 🔥 CLAVE: esperar a que esté activo
+    await navigator.serviceWorker.ready;
+
+    const token = await getToken(messaging, {
+      vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+      serviceWorkerRegistration: registration
     });
+
+    if (token) {
+      console.log("✅ TOKEN OK:", token);
+
+      await fetch('/guardar-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+    } else {
+      console.warn("⚠️ No se obtuvo token");
+    }
+
+  } catch (error) {
+    console.error("❌ Error en SW/token:", error);
   }
-});
+};
+
+registrarSWyToken();
 
 // 🚀 ENVIAR ALERTA
 window.enviarAlerta = async (tipo) => {
