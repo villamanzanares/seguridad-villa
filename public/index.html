@@ -1,120 +1,125 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Villa Segura</title>
-
-<style>
-body {
-  margin: 0;
-  font-family: Arial;
-}
-
-#footer {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  background: black;
-  color: white;
-  padding: 15px;
-  text-align: center;
-}
-
-button {
-  width: 90%;
-  padding: 15px;
-  margin: 10px;
-  font-size: 16px;
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Villa Segura</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-<h2 style="text-align:center;">🚨 Villa Segura</h2>
+  <h1>Villa Segura - Alertas Vecinales</h1>
 
-<div style="text-align:center;">
-  <button onclick="enviarAlerta('Emergencia')">Emergencia</button>
-  <button onclick="enviarAlerta('Robo')">Robo</button>
-</div>
+  <div id="botones">
+    <button class="alerta" data-tipo="EMERGENCIA">EMERGENCIA</button>
+    <button class="alerta" data-tipo="ROBO">ROBO</button>
+    <button class="alerta" data-tipo="INCENDIO">INCENDIO</button>
+    <button class="alerta" data-tipo="ASISTENCIA">ASISTENCIA</button>
+  </div>
 
-<div id="footer">Esperando alertas...</div>
+  <footer id="footer">Estado: listo ✅</footer>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
-import { getFirestore, collection, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  <audio id="sirena" src="sirena.mp3"></audio>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-  authDomain: "alerta-rosko.firebaseapp.com",
-  projectId: "alerta-rosko",
-  storageBucket: "alerta-rosko.firebasestorage.app",
-  messagingSenderId: "1022811358317",
-  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-};
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging.js";
+    import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore.js";
 
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-const db = getFirestore(app);
+    // 🔥 CONFIG
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+      authDomain: "alerta-rosko.firebaseapp.com",
+      projectId: "alerta-rosko",
+      storageBucket: "alerta-rosko.firebasestorage.app",
+      messagingSenderId: "1022811358317",
+      appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+    };
 
-// 🔔 SERVICE WORKER
-navigator.serviceWorker.register("/firebase-messaging-sw.js")
-.then(registration => {
-  getToken(messaging, {
-    vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-    serviceWorkerRegistration: registration
-  }).then(token => {
-    if (token) {
-      fetch("/guardar-token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ token })
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+    const db = getFirestore(app);
+
+    const footer = document.getElementById("footer");
+    const sirena = document.getElementById("sirena");
+
+    // 🧠 DATOS DEL USUARIO (puedes cambiarlos después por login)
+    const nombre = localStorage.getItem("nombre") || "Vecino";
+    const telefono = localStorage.getItem("telefono") || "Sin teléfono";
+    const direccion = localStorage.getItem("direccion") || "Sin dirección";
+
+    // 🔔 SERVICE WORKER + TOKEN
+    navigator.serviceWorker.register("/firebase-messaging-sw.js")
+    .then(registration => {
+      getToken(messaging, {
+        vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+        serviceWorkerRegistration: registration
+      }).then(token => {
+        if (token) {
+          fetch("/guardar-token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token })
+          });
+        }
       });
-    }
-  });
-});
+    });
 
-// 🚨 ENVIAR ALERTA
-window.enviarAlerta = async (tipo) => {
-  await fetch("/enviar-alerta", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      tipo,
-      nombre: "Vecino",
-      direccion: "Casa X"
-    })
-  });
-};
+    // 📲 MENSAJE EN PRIMER PLANO
+    onMessage(messaging, (payload) => {
+      console.log("Push recibido:", payload);
+      sirena.play().catch(()=>{});
+    });
 
-// 🔥 TIEMPO REAL
-const footer = document.getElementById("footer");
+    // 🚨 BOTONES
+    document.querySelectorAll(".alerta").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const tipo = btn.dataset.tipo;
 
-const q = query(
-  collection(db, "alertas"),
-  orderBy("timestamp", "desc"),
-  limit(1)
-);
+        try {
+          await fetch("/enviar-alerta", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tipo,
+              nombre,
+              telefono,
+              direccion
+            })
+          });
 
-onSnapshot(q, (snapshot) => {
-  snapshot.forEach(doc => {
-    const data = doc.data();
+          footer.textContent = `Alerta enviada: ${tipo} ✅`;
 
-    footer.innerHTML = `
-      🚨 ${data.tipo} <br>
-      👤 ${data.nombre} <br>
-      📍 ${data.direccion}
-    `;
-  });
-});
-</script>
+        } catch (err) {
+          footer.textContent = "Error al enviar alerta ❌";
+          console.error(err);
+        }
+      });
+    });
+
+    // 🔥 TIEMPO REAL (LA MAGIA)
+    const q = query(
+      collection(db, "alertas"),
+      orderBy("timestamp", "desc"),
+      limit(1)
+    );
+
+    onSnapshot(q, (snapshot) => {
+      snapshot.forEach(doc => {
+        const data = doc.data();
+
+        footer.innerHTML = `
+          🚨 ${data.tipo} <br>
+          👤 ${data.nombre} <br>
+          📞 ${data.telefono} <br>
+          📍 ${data.direccion}
+        `;
+
+        sirena.play().catch(()=>{});
+      });
+    });
+
+  </script>
 
 </body>
 </html>
