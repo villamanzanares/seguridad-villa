@@ -6,8 +6,11 @@ import { fileURLToPath } from "url";
 const app = express();
 app.use(express.json());
 
-// 🔥 Firebase Admin
+// ===============================
+// 🔥 FIREBASE
+// ===============================
 let serviceAccount;
+
 try {
   serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 } catch (error) {
@@ -15,54 +18,92 @@ try {
 }
 
 if (!admin.apps.length && serviceAccount) {
-  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-  console.log("🔥 Firebase Admin OK");
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  console.log("🔥 Firebase OK");
 }
 
-// 📁 Frontend
+// ===============================
+// 🧠 MEMORIA DE TOKENS
+// ===============================
+let tokens = [];
+
+// ===============================
+// 📁 FRONTEND
+// ===============================
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
 app.use(express.static(path.join(__dirname, "public")));
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
 
-// 💾 Guardar token en Firestore
-app.post("/guardar-token", async (req, res) => {
-  const { token } = req.body;
-  if (!token) return res.status(400).json({ error: "Token requerido" });
-
-  try {
-    const docRef = admin.firestore().collection("tokens").doc(token);
-    await docRef.set({ createdAt: Date.now() });
-    console.log("📱 Token guardado:", token);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
+// Evitar cache del SW
+app.use('/firebase-messaging-sw.js', (req,res,next)=>{
+  res.setHeader('Cache-Control','no-cache');
+  next();
 });
 
-// 🚨 Enviar alerta
-app.post("/enviar-alerta", async (req, res) => {
-  const { titulo, nombre, telefono, ubicacion } = req.body;
-  try {
-    const snapshot = await admin.firestore().collection("tokens").get();
-    if (snapshot.empty) return res.status(400).json({ error: "No hay tokens registrados" });
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/index.html"));
+});
 
-    const tokens = snapshot.docs.map(doc => doc.id);
+// ===============================
+// 💾 GUARDAR TOKEN
+// ===============================
+app.post("/guardar-token", (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: "Token requerido" });
+  }
+
+  if (!tokens.includes(token)) {
+    tokens.push(token);
+    console.log("📱 Token guardado:", token);
+  }
+
+  res.json({ ok: true });
+});
+
+// ===============================
+// 🚨 ENVIAR ALERTA A TODOS
+// ===============================
+app.post("/enviar-alerta", async (req, res) => {
+  try {
+    const { titulo, nombre, telefono, ubicacion } = req.body;
+
+    if (tokens.length === 0) {
+      return res.status(400).json({ error: "No hay dispositivos registrados" });
+    }
+
     const mensaje = {
-      notification: { title: titulo, body: `${nombre || "Vecino"} - ${ubicacion || "Ubicación"}` },
-      data: { nombre, telefono, ubicacion, sonido: "sirena" },
-      tokens
+      notification: {
+        title: titulo || "🚨 ALERTIA",
+        body: `${nombre || "Vecino"} - ${ubicacion || "Ubicación"}`,
+      },
+      data: {
+        nombre: nombre || "",
+        telefono: telefono || "",
+        ubicacion: ubicacion || "",
+        sonido: "sirena",
+      },
+      tokens: tokens, // 🔥 ENVÍA A TODOS
     };
 
     const response = await admin.messaging().sendEachForMulticast(mensaje);
+
     console.log("✅ Alertas enviadas:", response.successCount);
     res.json({ ok: true });
-  } catch (err) {
-    console.error("❌ Error enviando alerta:", err);
-    res.status(500).json({ error: err.message });
+
+  } catch (error) {
+    console.error("❌ Error enviando alerta:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
+// ===============================
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log(`🚀 Servidor en puerto ${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+});
