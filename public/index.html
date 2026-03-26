@@ -4,68 +4,67 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Villa Segura</title>
-
 <style>
-  body { font-family: Arial, sans-serif; background: #0f172a; color: white; text-align: center; padding: 20px; }
-  h1 { margin-bottom: 20px; }
-  .botones { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
-  button { padding: 16px; font-size: 18px; border-radius: 12px; border: none; cursor: pointer; }
-  .rojo { background: #dc2626; }
-  .azul { background: #2563eb; }
-  .verde { background: #16a34a; }
-  .amarillo { background: #facc15; }
-  button.pulsando { transform: scale(1.1); box-shadow: 0 0 15px #facc15; transition: transform 0.1s, box-shadow 0.1s; }
-
-  footer { margin-top: 20px; padding: 10px; background: #1e293b; border-radius: 12px; }
-  .super-btn { position: fixed; bottom: 10px; right: 10px; font-size: 14px; padding: 6px 10px; }
-  .hidden { display: none; }
-  .form-container { background: #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
-  .form-container input, .form-container select { width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 6px; border: none; }
+  body { font-family: Arial, sans-serif; background: #0f172a; color: white; margin:0; padding:0; display:flex; flex-direction:column; min-height:100vh; }
+  h1 { margin-bottom: 20px; text-align:center; }
+  .hidden { display:none; }
+  .form-container { background:#1e293b; padding:20px; border-radius:12px; margin:20px auto; width:90%; max-width:400px; }
+  input, select { width:100%; padding:10px; margin:10px 0; border-radius:8px; border:none; }
+  button { padding:15px; font-size:16px; border:none; border-radius:12px; cursor:pointer; margin-top:10px; width:100%; transition: transform 0.1s; }
+  button:active { transform: scale(0.95); }
+  .rojo { background:#dc2626; }
+  .azul { background:#2563eb; }
+  .verde { background:#16a34a; }
+  .amarillo { background:#eab308; }
+  .botones { display:flex; flex-direction:column; gap:15px; margin:20px 0; max-width:400px; margin:auto; }
+  footer { background:#1e293b; text-align:center; padding:15px; margin-top:auto; font-size:14px; }
+  .super-btn { position:fixed; bottom:20px; right:20px; padding:10px 15px; border-radius:50%; background:#fbbf24; font-weight:bold; cursor:pointer; z-index:1000; }
 </style>
 </head>
 <body>
 
 <h1>🚨 Villa Segura</h1>
 
-<!-- FORMULARIO INSCRIPCIÓN -->
-<div id="formInscripcion" class="form-container">
-  <h2>Registro de Vecino</h2>
-  <input type="text" id="nombre" placeholder="Nombre" required>
+<!-- FORMULARIO INSCRIPCION VECINO -->
+<div id="formVecino" class="form-container">
+  <h2>Registro Vecino</h2>
+  <input type="text" id="nombre" placeholder="Nombre completo">
   <input type="text" id="telefono" placeholder="Teléfono">
   <input type="text" id="direccion" placeholder="Dirección">
   <input type="text" id="casaDepto" placeholder="Casa / Depto">
-  <select id="villa">
+  <select id="villaSelect">
     <option value="">Selecciona Villa</option>
   </select>
-  <button id="btnRegistrar">Registrar</button>
+  <button id="btnRegistrarVecino">Registrar y Entrar</button>
 </div>
 
-<!-- INTERFAZ APP -->
-<div id="app" class="hidden">
+<!-- BOTONES ALERTA -->
+<div id="appInterface" class="hidden">
   <div class="botones">
-    <button class="rojo">🚨 Emergencia</button>
-    <button class="azul">🛡 Seguridad</button>
-    <button class="verde">🚑 Ambulancia</button>
-    <button class="amarillo">🔥 Bomberos</button>
+    <button class="rojo" onclick="enviarAlerta('EMERGENCIA')">🚨 EMERGENCIA</button>
+    <button class="azul" onclick="enviarAlerta('SEGURIDAD')">🔒 SEGURIDAD</button>
+    <button class="verde" onclick="enviarAlerta('AMBULANCIA')">🚑 AMBULANCIA</button>
+    <button class="amarillo" onclick="enviarAlerta('BOMBEROS')">🔥 BOMBEROS</button>
   </div>
-
-  <footer id="footer">
-    <div id="footerDatos">Aún no hay alertas</div>
-  </footer>
 </div>
 
-<!-- BOTÓN SUPER USUARIO -->
-<button class="super-btn">Super Usuario</button>
+<!-- FOOTER -->
+<footer id="footer">Datos del vecino aparecerán aquí</footer>
 
+<!-- BOTON SUPER USUARIO -->
+<button class="super-btn">S</button>
+
+<!-- FORMULARIO SUPER USUARIO -->
 <div id="superForm" class="form-container hidden">
-  <h2>Agregar Villa</h2>
+  <h2>Agregar Villa (Super Usuario)</h2>
+  <input type="password" id="claveSuper" placeholder="Clave Super Usuario">
   <input type="text" id="nuevaVilla" placeholder="Nombre de Villa">
-  <button id="btnAgregarVilla">Agregar</button>
+  <button id="btnAgregarVilla">Agregar Villa</button>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
@@ -79,126 +78,90 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-let usuario = null;
+let usuarioLocal = null;
 
+// =====================
 // Cargar villas
-async function cargarVillas() {
-  try {
-    const res = await fetch("/villas");
-    const data = await res.json();
-    const select = document.getElementById("villa");
-    select.innerHTML = `<option value="">Selecciona Villa</option>`;
-    data.villas.forEach(v => {
-      const opt = document.createElement("option");
-      opt.value = v; opt.textContent = v;
-      select.appendChild(opt);
-    });
-  } catch(e) { console.error(e); }
+// =====================
+async function cargarVillas(){
+  const res = await fetch("/villas");
+  const data = await res.json();
+  const select = document.getElementById("villaSelect");
+  select.innerHTML = '<option value="">Selecciona Villa</option>';
+  data.villas.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v; opt.textContent = v;
+    select.appendChild(opt);
+  });
 }
-
 cargarVillas();
 
-// Funciones principales
-async function guardarVecino() {
-  const btn = document.getElementById("btnRegistrar");
-  btn.disabled = true; btn.textContent = "Registrando...";
-  const nombre = document.getElementById("nombre").value;
-  const telefono = document.getElementById("telefono").value;
-  const direccion = document.getElementById("direccion").value;
-  const casaDepto = document.getElementById("casaDepto").value;
-  const villa = document.getElementById("villa").value;
+// =====================
+// REGISTRAR VECINO
+// =====================
+async function guardarVecino(){
+  const nombre = document.getElementById("nombre").value.trim();
+  const telefono = document.getElementById("telefono").value.trim();
+  const direccion = document.getElementById("direccion").value.trim();
+  const casaDepto = document.getElementById("casaDepto").value.trim();
+  const villa = document.getElementById("villaSelect").value;
 
-  if (!nombre || !villa) { 
-    alert("Nombre y Villa obligatorios");
-    btn.disabled = false; btn.textContent = "Registrar";
-    return;
+  if(!nombre || !telefono || !direccion || !casaDepto || !villa){
+    alert("Completa todos los campos"); return;
   }
 
-  try {
+  try{
     const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-    await navigator.serviceWorker.ready;
     const permiso = await Notification.requestPermission();
-    if (permiso !== "granted") { 
-      alert("Permiso de notificación denegado");
-      btn.disabled = false; btn.textContent = "Registrar";
-      return; 
-    }
+    if(permiso!=="granted"){ alert("Permiso de notificaciones rechazado"); return; }
+    const token = await getToken(messaging,{vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw", serviceWorkerRegistration:registration});
+    usuarioLocal = { nombre, telefono, direccion, casaDepto, villa, token };
 
-    let token = null;
-    try {
-      token = await getToken(messaging, {
-        vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
-        serviceWorkerRegistration: registration
-      });
-    } catch(e) {
-      console.error("❌ No se pudo obtener token:", e);
-      alert("No se pudo registrar notificaciones. Revisa permisos o SW.");
-      btn.disabled = false; btn.textContent = "Registrar";
-      return;
-    }
+    await fetch("/guardar-token",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(usuarioLocal) });
 
-    usuario = { nombre, telefono, direccion, casaDepto, villa, token };
-    await fetch("/guardar-token", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(usuario) });
-
-    document.getElementById("formInscripcion").classList.add("hidden");
-    document.getElementById("app").classList.remove("hidden");
-    actualizarFooter(usuario);
-
-  } catch(e) { console.error(e); alert("Error al registrar usuario"); }
-  finally { btn.disabled = false; btn.textContent = "Registrar"; }
+    document.getElementById("formVecino").classList.add("hidden");
+    document.getElementById("appInterface").classList.remove("hidden");
+    actualizarFooter(usuarioLocal);
+  }catch(e){ console.error(e); alert("Error registrando vecino"); }
 }
+document.getElementById("btnRegistrarVecino").addEventListener("click", guardarVecino);
 
-async function enviarAlerta(tipo) {
-  if (!usuario) return;
-  usuario.tipo = tipo;
-  try {
-    const payload = { tipo, usuario };
-    const res = await fetch("/enviar-alerta", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload) });
+// =====================
+// ENVIAR ALERTA
+// =====================
+async function enviarAlerta(tipo){
+  if(!usuarioLocal){ alert("Usuario no registrado"); return; }
+  try{
+    const res = await fetch("/enviar-alerta",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ tipo, usuario:usuarioLocal }) });
     const data = await res.json();
-    console.log("📡 Alerta enviada:", data);
-    actualizarFooter(usuario); // actualizar localmente al enviar
-  } catch(e) { console.error(e); }
+    if(data.ok){ actualizarFooter(usuarioLocal, tipo); }
+  }catch(e){ console.error(e); }
 }
 
-function actualizarFooter(datos) {
-  const f = document.getElementById("footerDatos");
-  f.textContent = `${datos.tipo || "ALERTA"} | ${datos.nombre} | ${datos.direccion} | ${datos.telefono} | ${datos.casaDepto || ""} | ${datos.villa}`;
-  f.style.background = "#facc15"; // flash amarillo
-  setTimeout(() => f.style.background = "#1e293b", 500);
+// =====================
+// FOOTER
+// =====================
+function actualizarFooter(usuario, tipo=""){
+  const f = document.getElementById("footer");
+  f.textContent = `Villa: ${usuario.villa} | Tipo: ${tipo} | Nombre: ${usuario.nombre} | Dirección: ${usuario.direccion} | Casa/Depto: ${usuario.casaDepto} | Tel: ${usuario.telefono}`;
 }
 
-function efectoPulso(btn) {
-  btn.classList.add("pulsando");
-  setTimeout(() => btn.classList.remove("pulsando"), 150);
-}
-
-function toggleSuperForm() {
-  document.getElementById("superForm").classList.toggle("hidden");
-}
-
-async function agregarVilla() {
+// =====================
+// SUPER USUARIO
+// =====================
+const SUPER_CLAVE = "villa2026";
+document.querySelector(".super-btn").addEventListener("click", ()=>{ document.getElementById("superForm").classList.toggle("hidden"); });
+document.getElementById("btnAgregarVilla").addEventListener("click", async ()=>{
+  const clave = document.getElementById("claveSuper").value;
   const nombre = document.getElementById("nuevaVilla").value;
-  if (!nombre) return alert("Nombre obligatorio");
-  await fetch("/agregar-villa", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({nombre}) });
-  alert("Villa agregada");
-  document.getElementById("nuevaVilla").value = "";
-  cargarVillas();
-}
-
-// ================================
-// EVENT LISTENERS
-document.getElementById("btnRegistrar").addEventListener("click", guardarVecino);
-document.querySelector(".rojo").addEventListener("click", e => { efectoPulso(e.target); enviarAlerta("Emergencia"); });
-document.querySelector(".azul").addEventListener("click", e => { efectoPulso(e.target); enviarAlerta("Seguridad"); });
-document.querySelector(".verde").addEventListener("click", e => { efectoPulso(e.target); enviarAlerta("Ambulancia"); });
-document.querySelector(".amarillo").addEventListener("click", e => { efectoPulso(e.target); enviarAlerta("Bomberos"); });
-document.querySelector(".super-btn").addEventListener("click", toggleSuperForm);
-document.getElementById("btnAgregarVilla").addEventListener("click", agregarVilla);
-
-// Mensajes push en primer plano
-onMessage(messaging, (payload) => { 
-  console.log("📩 Alerta recibida:", payload.data); 
-  actualizarFooter(payload.data); 
+  if(clave!==SUPER_CLAVE){ alert("Clave incorrecta"); return; }
+  if(!nombre){ alert("Nombre obligatorio"); return; }
+  try{
+    await fetch("/agregar-villa",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ nombre }) });
+    alert("Villa agregada");
+    document.getElementById("nuevaVilla").value=""; document.getElementById("claveSuper").value="";
+    cargarVillas();
+  }catch(e){ console.error(e); alert("Error agregando villa"); }
 });
 </script>
 </body>
