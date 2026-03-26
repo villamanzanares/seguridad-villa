@@ -5,20 +5,91 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Villa Segura</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #0f172a; color: white; margin:0; padding:0; display:flex; flex-direction:column; min-height:100vh; }
+  body {
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: white;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
   h1 { margin-bottom: 20px; text-align:center; }
+
   .hidden { display:none; }
-  .form-container { background:#1e293b; padding:20px; border-radius:12px; margin:20px auto; width:90%; max-width:400px; }
-  input, select { width:100%; padding:10px; margin:10px 0; border-radius:8px; border:none; }
-  button { padding:15px; font-size:16px; border:none; border-radius:12px; cursor:pointer; margin-top:10px; width:100%; transition: transform 0.1s; }
+
+  .form-container {
+    background:#1e293b;
+    padding:20px;
+    border-radius:12px;
+    margin:20px auto;
+    width:90%;
+    max-width:400px;
+  }
+
+  input, select {
+    width:100%;
+    padding:10px;
+    margin:10px 0;
+    border-radius:8px;
+    border:none;
+  }
+
+  button {
+    padding:15px;
+    font-size:16px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    margin-top:10px;
+    width:100%;
+    transition: transform 0.1s;
+  }
+
   button:active { transform: scale(0.95); }
+
   .rojo { background:#dc2626; }
   .azul { background:#2563eb; }
   .verde { background:#16a34a; }
   .amarillo { background:#eab308; }
-  .botones { display:flex; flex-direction:column; gap:15px; margin:20px 0; max-width:400px; margin:auto; }
-  footer { background:#1e293b; text-align:center; padding:15px; margin-top:auto; font-size:14px; }
-  .super-btn { position:fixed; bottom:20px; right:20px; padding:10px 15px; border-radius:50%; background:#fbbf24; font-weight:bold; cursor:pointer; z-index:1000; }
+
+  .botones {
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+    margin:20px 0;
+    max-width:400px;
+    margin:auto;
+  }
+
+  /* Footer estilo tarjeta */
+  footer {
+    background:#1e293b;
+    color:white;
+    text-align:left;
+    padding:15px 20px;
+    font-size:14px;
+    margin:20px auto;
+    border-radius:12px;
+    max-width:600px;
+    width:90%;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    line-height:1.4em;
+  }
+
+  .super-btn {
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    padding:10px 15px;
+    border-radius:50%;
+    background:#fbbf24;
+    font-weight:bold;
+    cursor:pointer;
+    z-index:1000;
+  }
 </style>
 </head>
 <body>
@@ -82,7 +153,6 @@ let usuarioLocal = null;
 
 // =====================
 // Cargar villas
-// =====================
 async function cargarVillas(){
   const res = await fetch("/villas");
   const data = await res.json();
@@ -98,7 +168,6 @@ cargarVillas();
 
 // =====================
 // REGISTRAR VECINO
-// =====================
 async function guardarVecino(){
   const nombre = document.getElementById("nombre").value.trim();
   const telefono = document.getElementById("telefono").value.trim();
@@ -114,9 +183,12 @@ async function guardarVecino(){
     const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
     const permiso = await Notification.requestPermission();
     if(permiso!=="granted"){ alert("Permiso de notificaciones rechazado"); return; }
-    const token = await getToken(messaging,{vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw", serviceWorkerRegistration:registration});
-    usuarioLocal = { nombre, telefono, direccion, casaDepto, villa, token };
+    const token = await getToken(messaging,{
+      vapidKey:"BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw",
+      serviceWorkerRegistration:registration
+    });
 
+    usuarioLocal = { nombre, telefono, direccion, casaDepto, villa, token };
     await fetch("/guardar-token",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(usuarioLocal) });
 
     document.getElementById("formVecino").classList.add("hidden");
@@ -128,7 +200,6 @@ document.getElementById("btnRegistrarVecino").addEventListener("click", guardarV
 
 // =====================
 // ENVIAR ALERTA
-// =====================
 async function enviarAlerta(tipo){
   if(!usuarioLocal){ alert("Usuario no registrado"); return; }
   try{
@@ -140,17 +211,24 @@ async function enviarAlerta(tipo){
 
 // =====================
 // FOOTER
-// =====================
 function actualizarFooter(usuario, tipo=""){
   const f = document.getElementById("footer");
-  f.textContent = `Villa: ${usuario.villa} | Tipo: ${tipo} | Nombre: ${usuario.nombre} | Dirección: ${usuario.direccion} | Casa/Depto: ${usuario.casaDepto} | Tel: ${usuario.telefono}`;
+  f.innerHTML = `
+    <strong>Villa:</strong> ${usuario.villa} <br>
+    <strong>Tipo:</strong> ${tipo} <br>
+    <strong>Nombre:</strong> ${usuario.nombre} <br>
+    <strong>Dirección:</strong> ${usuario.direccion} <br>
+    <strong>Casa/Depto:</strong> ${usuario.casaDepto} <br>
+    <strong>Tel:</strong> ${usuario.telefono}
+  `;
 }
 
 // =====================
 // SUPER USUARIO
-// =====================
 const SUPER_CLAVE = "villa2026";
-document.querySelector(".super-btn").addEventListener("click", ()=>{ document.getElementById("superForm").classList.toggle("hidden"); });
+document.querySelector(".super-btn").addEventListener("click", ()=>{
+  document.getElementById("superForm").classList.toggle("hidden");
+});
 document.getElementById("btnAgregarVilla").addEventListener("click", async ()=>{
   const clave = document.getElementById("claveSuper").value;
   const nombre = document.getElementById("nuevaVilla").value;
@@ -159,10 +237,12 @@ document.getElementById("btnAgregarVilla").addEventListener("click", async ()=>{
   try{
     await fetch("/agregar-villa",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ nombre }) });
     alert("Villa agregada");
-    document.getElementById("nuevaVilla").value=""; document.getElementById("claveSuper").value="";
+    document.getElementById("nuevaVilla").value=""; 
+    document.getElementById("claveSuper").value="";
     cargarVillas();
   }catch(e){ console.error(e); alert("Error agregando villa"); }
 });
 </script>
+
 </body>
 </html>
