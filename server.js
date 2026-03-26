@@ -17,21 +17,15 @@ try {
 }
 
 if (!admin.apps.length && serviceAccount) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
   console.log("🔥 Firebase OK");
 }
 
 // ===============================
-// 🧠 MEMORIA DE TOKENS POR VILLA
+// 🧠 MEMORIA DE USUARIOS Y VILLAS
 // ===============================
-let vecinos = []; // {nombre, telefono, direccion, casaDepto, villa, token}
-
-// ===============================
-// 🏠 VILLAS DISPONIBLES
-// ===============================
-let villas = ["Villa Manzanares"];
+let usuarios = []; // { nombre, telefono, direccion, casaDepto, villa, token }
+let villas = ["Villa Manzanares"]; // lista de villas disponibles
 
 // ===============================
 // 📁 FRONTEND
@@ -46,19 +40,18 @@ app.get("/", (req, res) => {
 });
 
 // ===============================
-// 💾 GUARDAR TOKEN + DATOS VECINO
+// 💾 GUARDAR TOKEN / USUARIO
 // ===============================
 app.post("/guardar-token", (req, res) => {
-  const { nombre, telefono, direccion, casaDepto, villa, token } = req.body;
+  const u = req.body;
+  if (!u.token || !u.nombre || !u.villa) return res.status(400).json({ error: "Datos incompletos" });
 
-  if (!nombre || !villa || !token) {
-    return res.status(400).json({ error: "Nombre, Villa y Token requeridos" });
-  }
-
-  const existing = vecinos.find(v => v.token === token);
-  if (!existing) {
-    vecinos.push({ nombre, telefono, direccion, casaDepto, villa, token });
-    console.log("📱 Vecino registrado:", nombre, "Villa:", villa);
+  const index = usuarios.findIndex(x => x.token === u.token);
+  if (index === -1) {
+    usuarios.push(u);
+    console.log("📱 Usuario registrado:", u.nombre, "Villa:", u.villa);
+  } else {
+    usuarios[index] = u; // actualizar datos
   }
 
   res.json({ ok: true });
@@ -70,31 +63,24 @@ app.post("/guardar-token", (req, res) => {
 app.post("/enviar-alerta", async (req, res) => {
   try {
     const { tipo, usuario } = req.body;
+    if (!usuario || !usuario.villa) return res.status(400).json({ error: "Usuario sin villa" });
 
-    if (!usuario || !usuario.villa) {
-      return res.status(400).json({ error: "Usuario o Villa inválido" });
-    }
-
-    const villaVecinos = vecinos.filter(v => v.villa === usuario.villa);
-    const tokens = villaVecinos.map(v => v.token);
-
-    if (tokens.length === 0) {
-      return res.status(400).json({ error: "No hay dispositivos registrados en la villa" });
-    }
+    const destinatarios = usuarios.filter(u => u.villa === usuario.villa && u.token);
+    if (destinatarios.length === 0) return res.status(400).json({ error: "No hay usuarios en la villa" });
 
     const mensaje = {
       notification: {
-        title: tipo,
-        body: `${usuario.nombre} - ${usuario.direccion}`
+        title: tipo || "🚨 ALERTA",
+        body: `${usuario.nombre} - ${usuario.direccion}`,
       },
       data: usuario,
-      tokens: tokens
+      tokens: destinatarios.map(u => u.token),
     };
 
     const response = await admin.messaging().sendEachForMulticast(mensaje);
-    console.log(`✅ Alertas enviadas a Villa ${usuario.villa}:`, response.successCount);
-
+    console.log("✅ Alertas enviadas:", response.successCount);
     res.json({ ok: true });
+
   } catch (error) {
     console.error("❌ Error enviando alerta:", error);
     res.status(500).json({ error: error.message });
@@ -102,25 +88,17 @@ app.post("/enviar-alerta", async (req, res) => {
 });
 
 // ===============================
-// 📋 LISTAR VILLAS
+// 🏠 ENDPOINTS VILLAS
 // ===============================
 app.get("/villas", (req, res) => {
   res.json({ villas });
 });
 
-// ===============================
-// ➕ AGREGAR VILLA (SUPER USUARIO)
-// ===============================
 app.post("/agregar-villa", (req, res) => {
   const { nombre } = req.body;
-  if (!nombre) return res.status(400).json({ error: "Nombre obligatorio" });
-
-  if (!villas.includes(nombre)) {
-    villas.push(nombre);
-    console.log("🏘 Nueva Villa agregada:", nombre);
-  }
-
-  res.json({ ok: true });
+  if (!nombre) return res.status(400).json({ error: "Nombre de villa requerido" });
+  if (!villas.includes(nombre)) villas.push(nombre);
+  res.json({ ok: true, villas });
 });
 
 // ===============================
