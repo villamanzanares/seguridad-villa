@@ -1,6 +1,8 @@
+// 🔥 Firebase compat
 importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging-compat.js");
 
+// 🔥 Config Firebase
 firebase.initializeApp({
   apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
   authDomain: "alerta-rosko.firebaseapp.com",
@@ -12,6 +14,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// 🔔 CUANDO LLEGA PUSH (APP CERRADA O EN SEGUNDO PLANO)
 self.addEventListener("push", function(event) {
   if (!event.data) return;
   const data = event.data.json();
@@ -23,22 +26,20 @@ self.addEventListener("push", function(event) {
       body: cuerpo,
       icon: "/icon.png",
       badge: "/icon.png",
-      vibrate: [300,100,300,100,500],
+      vibrate: [300, 100, 300, 100, 500],
       requireInteraction: true,
-      data: data
+      data: data // 🔹 importante para footer
     })
   );
 });
 
+// 👆 CLICK EN NOTIFICACIÓN
 self.addEventListener("notificationclick", function(event) {
   event.notification.close();
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(clientList => {
       for (const client of clientList) {
-        if ("focus" in client) {
-          client.postMessage(event.notification.data);
-          return client.focus();
-        }
+        if (client.url.includes("/") && "focus" in client) return client.focus();
       }
       return clients.openWindow("/");
     })
