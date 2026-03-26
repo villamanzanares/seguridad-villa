@@ -5,19 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Villa Segura 🚨</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #f5f5f5;
-    margin: 0;
-    padding: 2rem;
-  }
-
-  h1 {
-    color: #e74c3c;
-    text-align: center;
-    margin-bottom: 1.5rem;
-  }
-
+  body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 2rem; }
+  h1 { color: #e74c3c; text-align: center; margin-bottom: 1.5rem; }
+  
   .alert-button {
     padding: 1rem 2rem;
     font-size: 1.2rem;
@@ -27,54 +17,17 @@
     border-radius: 8px;
     cursor: pointer;
     margin: 0.5rem;
-    position: relative;
-    overflow: hidden;
     transition: transform 0.1s ease-in-out;
   }
+  .alert-button:active { animation: pulse 0.4s ease-out; }
+  @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 rgba(231,76,60,0.7); } 50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(231,76,60,0.7); } 100% { transform: scale(1); box-shadow: 0 0 0 rgba(231,76,60,0); } }
 
-  .alert-button:active {
-    animation: pulse 0.4s ease-out;
-  }
+  .super-user-button { display:block; margin:1rem auto; padding:0.8rem 2rem; font-size:1rem; background-color:#3498db; color:white; border:none; border-radius:6px; cursor:pointer; }
 
-  @keyframes pulse {
-    0% { transform: scale(1); box-shadow: 0 0 0 rgba(231,76,60,0.7); }
-    50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(231,76,60,0.7); }
-    100% { transform: scale(1); box-shadow: 0 0 0 rgba(231,76,60,0); }
-  }
+  .usuarios-container { display:flex; flex-wrap:wrap; justify-content:center; margin-top:2rem; }
+  .usuario-card { background:white; border-radius:10px; padding:1rem; margin:0.5rem; width:200px; box-shadow:0 0 8px rgba(0,0,0,0.1); text-align:center; }
 
-  .super-user-button {
-    display: block;
-    margin: 1rem auto;
-    padding: 0.8rem 2rem;
-    font-size: 1rem;
-    background-color: #3498db;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-
-  .usuarios-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 2rem;
-  }
-
-  .usuario-card {
-    background: white;
-    border-radius: 10px;
-    padding: 1rem;
-    margin: 0.5rem;
-    width: 200px;
-    box-shadow: 0 0 8px rgba(0,0,0,0.1);
-    text-align: center;
-  }
-
-  .villas-list {
-    margin-top: 2rem;
-    text-align: center;
-  }
+  .villas-list { margin-top:2rem; text-align:center; }
 </style>
 </head>
 <body>
@@ -90,9 +43,7 @@
 <button class="super-user-button" onclick="superUsuarioAction()">Super Usuario</button>
 
 <!-- Lista de usuarios -->
-<div class="usuarios-container" id="usuariosContainer">
-  <!-- Tarjetas de usuarios se agregan dinámicamente -->
-</div>
+<div class="usuarios-container" id="usuariosContainer"></div>
 
 <!-- Lista de villas -->
 <div class="villas-list" id="villasList">
@@ -100,12 +51,12 @@
   <ul id="villasUl"></ul>
 </div>
 
-<!-- Firebase Messaging -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 
 <script>
-  // ======== CONFIGURACIÓN DE FIREBASE (solo frontend, sin private key) ========
+  // ===== CONFIGURACIÓN FIREBASE PÚBLICA =====
   const firebaseConfig = {
     apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
     authDomain: "alerta-rosko.firebaseapp.com",
@@ -114,57 +65,57 @@
     messagingSenderId: "1022811358317",
     appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
   };
-
   firebase.initializeApp(firebaseConfig);
   const messaging = firebase.messaging();
 
-  // ======== REGISTRAR TOKEN PARA NOTIFICACIONES ========
+  // ===== USUARIO ACTUAL =====
+  const currentUser = {
+    nombre: "Juan Carlos",
+    villa: "Villa Manzanares",
+    token: null
+  };
+
+  // ===== REGISTRAR TOKEN EN BACKEND =====
   async function registrarToken() {
     try {
       const token = await messaging.getToken({ vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw" });
-      if (!token) return console.warn("No se obtuvo token");
-      console.log("📱 Token Firebase:", token);
-
-      // Enviar token al backend
+      if (!token) return console.warn("No se obtuvo token de Firebase");
+      currentUser.token = token;
       await fetch("/guardar-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre: currentUser.nombre,
-          villa: currentUser.villa,
-          token
-        })
+        body: JSON.stringify(currentUser)
       });
-      console.log("✅ Token registrado en backend");
+      console.log("✅ Token registrado en backend:", token);
     } catch (err) {
       console.error("❌ Error registrando token:", err);
     }
   }
 
-  // ======== USUARIO ACTUAL ========
-  const currentUser = {
-    nombre: "Juan Carlos",
-    villa: "Villa Manzanares",
-    token: null // se asignará tras registrarToken()
-  };
-
-  // ======== FUNCIONES ========
-  function enviarAlerta(tipo) {
-    console.log("📡 Enviando alerta:", tipo);
-    fetch("/enviar-alerta", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tipo, usuario: currentUser })
-    })
-    .then(res => res.json())
-    .then(data => console.log("✅ Respuesta del servidor:", data))
-    .catch(err => console.error("❌ Error enviando alerta:", err));
+  // ===== ENVIAR ALERTA =====
+  async function enviarAlerta(tipo) {
+    try {
+      console.log("📡 Enviando alerta:", tipo, "Usuario:", currentUser);
+      const res = await fetch("/enviar-alerta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipo, usuario: currentUser })
+      });
+      const data = await res.json();
+      console.log("✅ Respuesta backend:", data);
+    } catch (err) {
+      console.error("❌ Error enviando alerta:", err);
+    }
   }
 
-  function superUsuarioAction() {
+  // ===== ACCIÓN SUPERUSUARIO =====
+  async function superUsuarioAction() {
     alert("Acción de superusuario ejecutada");
+    // Opcional: enviar alerta especial a toda la villa
+    enviarAlerta("👑 Alerta Superusuario");
   }
 
+  // ===== CARGAR VILLAS =====
   async function cargarVillas() {
     try {
       const res = await fetch("/villas");
@@ -181,36 +132,40 @@
     }
   }
 
-  // ======== USUARIOS SIMULADOS ========
-  const usuarios = [
-    { nombre: "Juan Carlos", villa: "Villa Manzanares", telefono: "12345678", direccion: "Calle A" },
-    { nombre: "Juan Julian García", villa: "Villa Manzanares", telefono: "87654321", direccion: "Calle B" }
-  ];
-
-  function mostrarUsuarios() {
-    const container = document.getElementById("usuariosContainer");
-    container.innerHTML = "";
-    usuarios.forEach(u => {
-      const div = document.createElement("div");
-      div.className = "usuario-card";
-      div.innerHTML = `<h4>${u.nombre}</h4>
-                       <p>${u.villa}</p>
-                       <p>${u.telefono}</p>
-                       <p>${u.direccion}</p>`;
-      container.appendChild(div);
-    });
+  // ===== MOSTRAR USUARIOS =====
+  async function cargarUsuarios() {
+    try {
+      // Para producción, podrías traer desde backend
+      const usuarios = [
+        { nombre: "Juan Carlos", villa: "Villa Manzanares", telefono: "12345678", direccion: "Calle A" },
+        { nombre: "Juan Julian García", villa: "Villa Manzanares", telefono: "87654321", direccion: "Calle B" }
+      ];
+      const container = document.getElementById("usuariosContainer");
+      container.innerHTML = "";
+      usuarios.forEach(u => {
+        const div = document.createElement("div");
+        div.className = "usuario-card";
+        div.innerHTML = `<h4>${u.nombre}</h4>
+                         <p>${u.villa}</p>
+                         <p>${u.telefono}</p>
+                         <p>${u.direccion}</p>`;
+        container.appendChild(div);
+      });
+    } catch (err) {
+      console.error("❌ Error cargando usuarios:", err);
+    }
   }
 
-  // ======== INICIALIZACIÓN ========
-  mostrarUsuarios();
-  cargarVillas();
-  registrarToken();
-
-  // ======== ESCUCHAR NOTIFICACIONES EN NAVEGADOR ========
+  // ===== ESCUCHAR NOTIFICACIONES EN TIEMPO REAL =====
   messaging.onMessage(payload => {
     console.log("📬 Notificación recibida:", payload);
     alert(`Nueva alerta: ${payload.notification.title} - ${payload.notification.body}`);
   });
+
+  // ===== INICIALIZACIÓN =====
+  registrarToken();
+  cargarVillas();
+  cargarUsuarios();
 </script>
 </body>
 </html>
