@@ -7,7 +7,7 @@
 <style>
   body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 2rem; }
   h1 { color: #e74c3c; text-align: center; margin-bottom: 1.5rem; }
-  
+
   .alert-button {
     padding: 1rem 2rem;
     font-size: 1.2rem;
@@ -17,15 +17,24 @@
     border-radius: 8px;
     cursor: pointer;
     margin: 0.5rem;
-    transition: transform 0.1s ease-in-out;
+    transition: transform 0.1s ease-in-out, opacity 0.2s;
   }
   .alert-button:active { animation: pulse 0.4s ease-out; }
-  @keyframes pulse { 0% { transform: scale(1); box-shadow: 0 0 0 rgba(231,76,60,0.7); } 50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(231,76,60,0.7); } 100% { transform: scale(1); box-shadow: 0 0 0 rgba(231,76,60,0); } }
+  @keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 rgba(231,76,60,0.7); }
+    50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(231,76,60,0.7); }
+    100% { transform: scale(1); box-shadow: 0 0 0 rgba(231,76,60,0); }
+  }
 
-  .super-user-button { display:block; margin:1rem auto; padding:0.8rem 2rem; font-size:1rem; background-color:#3498db; color:white; border:none; border-radius:6px; cursor:pointer; }
+  .super-user-button {
+    display:block; margin:1rem auto; padding:0.8rem 2rem; font-size:1rem;
+    background-color:#3498db; color:white; border:none; border-radius:6px; cursor:pointer;
+    transition: opacity 0.2s;
+  }
 
   .usuarios-container { display:flex; flex-wrap:wrap; justify-content:center; margin-top:2rem; }
-  .usuario-card { background:white; border-radius:10px; padding:1rem; margin:0.5rem; width:200px; box-shadow:0 0 8px rgba(0,0,0,0.1); text-align:center; }
+  .usuario-card { background:white; border-radius:10px; padding:1rem; margin:0.5rem; width:200px;
+    box-shadow:0 0 8px rgba(0,0,0,0.1); text-align:center; }
 
   .villas-list { margin-top:2rem; text-align:center; }
 </style>
@@ -35,12 +44,12 @@
 
 <!-- Botones de alerta -->
 <div style="text-align:center;">
-  <button class="alert-button" onclick="enviarAlerta('🚨 Emergencia')">🚨 Emergencia</button>
-  <button class="alert-button" onclick="enviarAlerta('⚠️ Precaución')">⚠️ Precaución</button>
+  <button class="alert-button" id="btnEmergencia" onclick="enviarAlerta('🚨 Emergencia', this)">🚨 Emergencia</button>
+  <button class="alert-button" id="btnPrecaucion" onclick="enviarAlerta('⚠️ Precaución', this)">⚠️ Precaución</button>
 </div>
 
 <!-- Botón Superusuario -->
-<button class="super-user-button" onclick="superUsuarioAction()">Super Usuario</button>
+<button class="super-user-button" id="btnSuper" onclick="superUsuarioAction(this)">Super Usuario</button>
 
 <!-- Lista de usuarios -->
 <div class="usuarios-container" id="usuariosContainer"></div>
@@ -92,9 +101,12 @@
     }
   }
 
-  // ===== ENVIAR ALERTA =====
-  async function enviarAlerta(tipo) {
+  // ===== ENVIAR ALERTA CON BLOQUEO TEMPORAL DEL BOTÓN =====
+  async function enviarAlerta(tipo, boton) {
     try {
+      boton.disabled = true;
+      boton.style.opacity = 0.6;
+
       console.log("📡 Enviando alerta:", tipo, "Usuario:", currentUser);
       const res = await fetch("/enviar-alerta", {
         method: "POST",
@@ -105,14 +117,23 @@
       console.log("✅ Respuesta backend:", data);
     } catch (err) {
       console.error("❌ Error enviando alerta:", err);
+    } finally {
+      boton.disabled = false;
+      boton.style.opacity = 1;
     }
   }
 
-  // ===== ACCIÓN SUPERUSUARIO =====
-  async function superUsuarioAction() {
-    alert("Acción de superusuario ejecutada");
-    // Opcional: enviar alerta especial a toda la villa
-    enviarAlerta("👑 Alerta Superusuario");
+  // ===== ACCIÓN SUPERUSUARIO CON BLOQUEO =====
+  async function superUsuarioAction(boton) {
+    try {
+      boton.disabled = true;
+      boton.style.opacity = 0.6;
+      alert("Acción de superusuario ejecutada");
+      await enviarAlerta("👑 Alerta Superusuario", boton);
+    } finally {
+      boton.disabled = false;
+      boton.style.opacity = 1;
+    }
   }
 
   // ===== CARGAR VILLAS =====
@@ -135,7 +156,6 @@
   // ===== MOSTRAR USUARIOS =====
   async function cargarUsuarios() {
     try {
-      // Para producción, podrías traer desde backend
       const usuarios = [
         { nombre: "Juan Carlos", villa: "Villa Manzanares", telefono: "12345678", direccion: "Calle A" },
         { nombre: "Juan Julian García", villa: "Villa Manzanares", telefono: "87654321", direccion: "Calle B" }
