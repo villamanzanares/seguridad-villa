@@ -79,16 +79,21 @@
     line-height:1.4em;
   }
 
+  /* Botón superusuario flotante y pequeño */
   .super-btn {
     position:fixed;
     bottom:20px;
     right:20px;
-    padding:10px 15px;
+    padding:12px 14px;
     border-radius:50%;
     background:#fbbf24;
     font-weight:bold;
     cursor:pointer;
     z-index:1000;
+    width:45px;
+    height:45px;
+    text-align:center;
+    font-size:18px;
   }
 </style>
 </head>
@@ -203,7 +208,11 @@ document.getElementById("btnRegistrarVecino").addEventListener("click", guardarV
 async function enviarAlerta(tipo){
   if(!usuarioLocal){ alert("Usuario no registrado"); return; }
   try{
-    const res = await fetch("/enviar-alerta",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ tipo, usuario:usuarioLocal }) });
+    const res = await fetch("/enviar-alerta",{ 
+      method:"POST", 
+      headers:{"Content-Type":"application/json"}, 
+      body:JSON.stringify({ tipo, villa:usuarioLocal.villa, usuario:usuarioLocal }) 
+    });
     const data = await res.json();
     if(data.ok){ actualizarFooter(usuarioLocal, tipo); }
   }catch(e){ console.error(e); }
@@ -243,6 +252,5 @@ document.getElementById("btnAgregarVilla").addEventListener("click", async ()=>{
   }catch(e){ console.error(e); alert("Error agregando villa"); }
 });
 </script>
-
 </body>
 </html>
