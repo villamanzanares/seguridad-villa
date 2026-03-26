@@ -1,211 +1,153 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Villa Segura 🚨</title>
+  <meta charset="UTF-8">
+  <title>Villa Segura 🚨</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<style>
-body { 
-  font-family: Arial, sans-serif; 
-  background: #f0f3f5; 
-  margin: 0; 
-  padding: 3rem; 
-  display: flex; 
-  flex-direction: column; 
-  align-items: center;
-}
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
 
-h1 { color: #e74c3c; }
+    h1 {
+      margin-bottom: 10px;
+    }
 
-.alert-button {
-  width: 220px;
-  padding: 1rem;
-  font-size: 1.2rem;
-  color: white;
-  background: #e74c3c;
-  border: none;
-  border-radius: 10px;
-  margin: 0.5rem 0;
-  cursor: pointer;
-}
+    input {
+      width: 90%;
+      max-width: 400px;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 10px;
+      border: none;
+    }
 
-.super-user-button {
-  width: 180px;
-  padding: 0.8rem;
-  margin-top: 1.5rem;
-  background: #3498db;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
+    button {
+      display: block;
+      width: 95%;
+      max-width: 420px;
+      margin: 10px auto;
+      padding: 18px;
+      font-size: 18px;
+      border-radius: 14px;
+      border: none;
+      background: #ef4444;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
 
-/* 🔔 CONTENEDOR */
-#notificaciones {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 9999;
-}
+    button:active {
+      transform: scale(0.97);
+    }
 
-/* 🔔 BANNER */
-.banner {
-  background: black;
-  color: white;
-  padding: 1rem;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  min-width: 250px;
-  font-size: 1rem;
-  box-shadow: 0 0 20px rgba(0,0,0,0.5);
-}
+    #debug {
+      margin-top: 20px;
+      font-size: 12px;
+      opacity: 0.7;
+    }
 
-.banner.emergencia { background: #e74c3c; }
-.banner.precaucion { background: #f39c12; }
-.banner.super { background: #3498db; }
-
-</style>
+    .banner {
+      background: #22c55e;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+    }
+  </style>
 </head>
 
 <body>
 
-<h1>Villa Segura 🚨</h1>
+  <div class="banner">🧪 TEST VISUAL ACTIVO</div>
 
-<button class="alert-button" onclick="enviarAlerta('🚨 Emergencia', this)">🚨 Emergencia</button>
-<button class="alert-button" onclick="enviarAlerta('⚠️ Precaución', this)">⚠️ Precaución</button>
+  <h1>🚨 Villa Segura</h1>
 
-<button class="super-user-button" onclick="superUsuarioAction(this)">Super Usuario</button>
+  <input id="nombre" placeholder="Tu nombre" />
+  <input id="direccion" placeholder="Tu dirección" />
 
-<div id="notificaciones"></div>
+  <button onclick="enviarAlerta('Emergencia')">🚨 EMERGENCIA</button>
+  <button onclick="enviarAlerta('SOS')">🆘 SOS</button>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
+  <div id="debug"></div>
 
-<script>
-// 🔥 CONFIG
-const firebaseConfig = {
-  apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
-  authDomain: "alerta-rosko.firebaseapp.com",
-  projectId: "alerta-rosko",
-  storageBucket: "alerta-rosko.firebasestorage.app",
-  messagingSenderId: "1022811358317",
-  appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
-};
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 
-firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging();
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzKHOwWJIuC4_f2OMuoEyMxJnucC-jr5I",
+      authDomain: "alerta-rosko.firebaseapp.com",
+      projectId: "alerta-rosko",
+      storageBucket: "alerta-rosko.firebasestorage.app",
+      messagingSenderId: "1022811358317",
+      appId: "1:1022811358317:web:ce210848e7ed63d1412b64"
+    };
 
-// 👤 USER
-const currentUser = {
-  nombre: "Juan Carlos",
-  villa: "Villa Manzanares",
-  token: null
-};
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
 
-// 🔑 TOKEN
-async function registrarToken() {
-  try {
-    const token = await messaging.getToken({ vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw" });
+    async function init() {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          alert("Permiso denegado");
+          return;
+        }
 
-    if (!token) {
-      console.warn("⚠️ No se obtuvo token");
-      return;
+        const token = await messaging.getToken({
+          vapidKey: "BJdodl41DkUmiqBVuJ8AjALteBLa_YGsti0uynu6zKz0WGS13V3Rk5SB0rPyfEtmSpsJ_QUlZdzSH9shcVttofw"
+        });
+
+        console.log("✅ Token:", token);
+
+        await fetch("/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token })
+        });
+
+      } catch (err) {
+        console.error("❌ Error init:", err);
+      }
     }
 
-    currentUser.token = token;
+    init();
 
-    await fetch("/guardar-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(currentUser)
+    function enviarAlerta(tipo) {
+      const nombre = document.getElementById("nombre").value.trim();
+      const direccion = document.getElementById("direccion").value.trim();
+
+      console.log("📤 Enviando alerta:", { nombre, direccion, tipo });
+
+      fetch("/alerta", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          nombre,
+          direccion,
+          tipo
+        })
+      });
+    }
+
+    messaging.onMessage((payload) => {
+      console.log("📩 Notificación recibida:", payload);
+
+      const nombre = payload.data?.nombre || "Usuario";
+      const direccion = payload.data?.direccion || "Ubicación no disponible";
+
+      document.getElementById("debug").innerHTML =
+        `🚨 ${nombre} - ${direccion}`;
     });
-
-    console.log("✅ Token registrado en backend:", token);
-
-  } catch (err) {
-    console.error("❌ Error token:", err);
-  }
-}
-
-// 🚨 ALERTA
-async function enviarAlerta(tipo, btn) {
-  try {
-    btn.disabled = true;
-    btn.style.opacity = 0.6;
-
-    console.log("📡 Enviando alerta:", tipo, currentUser);
-
-    const res = await fetch("/enviar-alerta", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tipo, usuario: currentUser })
-    });
-
-    const data = await res.json();
-    console.log("✅ Respuesta backend:", data);
-
-  } catch (err) {
-    console.error("❌ Error alerta:", err);
-  } finally {
-    btn.disabled = false;
-    btn.style.opacity = 1;
-  }
-}
-
-// 👑 SUPER
-async function superUsuarioAction(btn) {
-  await enviarAlerta("👑 Alerta Superusuario", btn);
-}
-
-// 🔔 MOSTRAR BANNER (DEBUG)
-function mostrarBanner(titulo, cuerpo) {
-  console.log("🎯 Mostrando banner:", titulo, cuerpo);
-
-  const contenedor = document.getElementById("notificaciones");
-
-  const div = document.createElement("div");
-  div.className = "banner";
-
-  if (titulo.includes("🚨")) div.classList.add("emergencia");
-  else if (titulo.includes("⚠️")) div.classList.add("precaucion");
-  else if (titulo.includes("👑")) div.classList.add("super");
-
-  div.innerHTML = `<strong>${titulo}</strong><br>${cuerpo}`;
-
-  contenedor.appendChild(div);
-
-  // ❌ SIN setTimeout → no desaparece (modo debug)
-}
-
-// 📩 ESCUCHA FIREBASE
-messaging.onMessage(payload => {
-  console.log("📬 Notificación recibida:", payload);
-
-  const titulo =
-    payload.notification?.title ||
-    payload.data?.tipo ||
-    "🚨 Alerta";
-
-  const cuerpo =
-    payload.notification?.body ||
-    (payload.data?.nombre
-      ? payload.data.nombre + " - " + (payload.data.direccion || "")
-      : "Sin información");
-
-  mostrarBanner(titulo, cuerpo);
-});
-
-// 🧪 TEST MANUAL AUTOMÁTICO (para descartar problemas visuales)
-setTimeout(() => {
-  mostrarBanner("🧪 TEST VISUAL", "Si ves esto, el sistema gráfico funciona");
-}, 2000);
-
-// 🚀 INIT
-registrarToken();
-
-</script>
+  </script>
 
 </body>
 </html>
