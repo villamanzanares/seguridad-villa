@@ -1,6 +1,3 @@
-🔥 VERSION GITHUB 🔥
-<h1>🔥 VERSION NUEVA REAL 🔥</h1>
-<h1 style="color:red;">🔥 VERSION NUEVA 🔥</h1>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -17,7 +14,6 @@ body {
   text-align: center;
 }
 
-/* HEADER */
 .header {
   padding: 20px;
 }
@@ -36,7 +32,6 @@ body {
   opacity: 0.8;
 }
 
-/* BOTONES */
 .container {
   padding: 20px;
 }
@@ -53,7 +48,6 @@ button {
   color: white;
 }
 
-/* FOOTER */
 .footer {
   position: fixed;
   bottom: 0;
@@ -95,7 +89,6 @@ const usuario = {
 };
 
 function enviar(tipo) {
-
   fetch('/alerta', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -104,24 +97,22 @@ function enviar(tipo) {
       tipo
     })
   });
-
 }
 
-/* CUANDO LLEGA ALERTA */
-function mostrarAlerta(data) {
-  document.getElementById("info").innerHTML =
-    `${data.tipo} / ${data.nombre} / ${data.direccion} / ${data.telefono} / ${data.villa}`;
-}
+/* 🔥 ESCUCHA EN TIEMPO REAL */
+setInterval(async () => {
+  try {
+    const res = await fetch('/estado');
+    const data = await res.json();
 
-/* SIMULACIÓN (puedes borrar después) */
-setTimeout(() => {
-  mostrarAlerta({
-    tipo: "Emergencia",
-    nombre: "Juan Carlos",
-    direccion: "Av. Siempre Viva 123",
-    telefono: "+56912345678",
-    villa: "Villa Los Pinos"
-  });
+    if (data && data.tipo) {
+      document.getElementById("info").innerHTML =
+        `${data.tipo} / ${data.nombre} / ${data.direccion}`;
+    }
+
+  } catch (err) {
+    console.log("Error escuchando alertas");
+  }
 }, 2000);
 
 </script>
