@@ -1,81 +1,52 @@
-require('dotenv').config();
-
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const admin = require('firebase-admin');
+const express = require("express");
+const cors = require("cors");
+const admin = require("firebase-admin");
 
 const app = express();
-
-// 🔥 Middlewares
 app.use(cors());
 app.use(express.json());
 
-// 📁 Servir carpeta PUBLIC (CLAVE)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// 🔐 Inicializar Firebase SOLO si existe variable
-let firebaseReady = false;
-
+// 🔥 FIREBASE (DESDE VARIABLE DE ENTORNO)
 try {
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
 
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
 
-    firebaseReady = true;
-    console.log('🔥 Firebase inicializado correctamente');
-  } else {
-    console.log('⚠️ FIREBASE_SERVICE_ACCOUNT no definida');
-  }
+  console.log("🔥 Firebase inicializado correctamente");
+
 } catch (error) {
-  console.error('❌ Error inicializando Firebase:', error.message);
+  console.error("❌ Error inicializando Firebase:", error);
 }
 
-// 🧪 Ruta test backend
-app.get('/test', (req, res) => {
-  res.send('🚨 Servidor Villa Segura funcionando');
+// 📦 SERVIR FRONTEND
+app.use(express.static("public"));
+
+// 🧠 MEMORIA DE ALERTA (simple)
+let ultimaAlerta = null;
+
+// 🚨 RECIBIR ALERTA
+app.post("/alerta", (req, res) => {
+  ultimaAlerta = req.body;
+
+  console.log("🚨 Nueva alerta:", ultimaAlerta);
+
+  res.json({ ok: true });
 });
 
-// 🚨 Endpoint enviar alerta
-app.post('/alerta', async (req, res) => {
-  if (!firebaseReady) {
-    return res.status(500).json({ error: 'Firebase no inicializado' });
-  }
-
-  const { titulo, mensaje, tokens } = req.body;
-
-  try {
-    const response = await admin.messaging().sendMulticast({
-      notification: {
-        title: titulo || '🚨 Alerta',
-        body: mensaje || 'Nueva alerta'
-      },
-      tokens: tokens || []
-    });
-
-    res.json({
-      success: true,
-      enviados: response.successCount,
-      fallidos: response.failureCount
-    });
-
-  } catch (error) {
-    console.error('❌ Error enviando alerta:', error);
-    res.status(500).json({ error: 'Error enviando alerta' });
-  }
+// 📡 ENTREGAR ALERTA
+app.get("/estado", (req, res) => {
+  res.json(ultimaAlerta);
 });
 
-// 🌐 Ruta principal (ESTO ARREGLA TU PROBLEMA)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// 🧪 TEST
+app.get("/test", (req, res) => {
+  res.send("🚨 Servidor Villa Segura funcionando");
 });
 
-// 🚀 Puerto
+// 🚀 START SERVER
 const PORT = process.env.PORT || 10000;
-
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log("🚀 Servidor corriendo en puerto " + PORT);
 });
