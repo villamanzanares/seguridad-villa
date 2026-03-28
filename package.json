@@ -1,7 +1,6 @@
 {
   "name": "alertas-rosko",
   "version": "1.0.0",
-  "type": "module",
   "main": "server.js",
   "engines": {
     "node": "22.x"
