@@ -1,54 +1,79 @@
-const express = require("express");
-const cors = require("cors");
-const admin = require("firebase-admin");
+require('dotenv').config();
+
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const admin = require('firebase-admin');
 
 const app = express();
+
+// 🔥 Middlewares
 app.use(cors());
 app.use(express.json());
 
-// 🔥 Verificación de variable (puedes borrarlo después)
-console.log("VARIABLE RAW:", process.env.FIREBASE_SERVICE_ACCOUNT);
+// 📁 Servir carpeta PUBLIC (CLAVE)
+app.use(express.static(path.join(__dirname, 'public')));
 
-// 🔐 Inicializar Firebase
-let serviceAccount;
+// 🔐 Inicializar Firebase SOLO si existe variable
+let firebaseReady = false;
 
 try {
-  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-} catch (error) {
-  console.error("❌ Error parseando FIREBASE_SERVICE_ACCOUNT:", error);
-  process.exit(1);
-}
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-
-// 🚀 Ruta de prueba
-app.get("/", (req, res) => {
-  res.send("🚨 Servidor Villa Segura funcionando");
-});
-
-// 📡 Endpoint para enviar notificaciones
-app.post("/send-alert", async (req, res) => {
-  const { token, titulo, mensaje } = req.body;
-
-  try {
-    await admin.messaging().send({
-      token,
-      notification: {
-        title: titulo,
-        body: mensaje,
-      },
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
     });
 
-    res.status(200).send("✅ Notificación enviada");
+    firebaseReady = true;
+    console.log('🔥 Firebase inicializado correctamente');
+  } else {
+    console.log('⚠️ FIREBASE_SERVICE_ACCOUNT no definida');
+  }
+} catch (error) {
+  console.error('❌ Error inicializando Firebase:', error.message);
+}
+
+// 🧪 Ruta test backend
+app.get('/test', (req, res) => {
+  res.send('🚨 Servidor Villa Segura funcionando');
+});
+
+// 🚨 Endpoint enviar alerta
+app.post('/alerta', async (req, res) => {
+  if (!firebaseReady) {
+    return res.status(500).json({ error: 'Firebase no inicializado' });
+  }
+
+  const { titulo, mensaje, tokens } = req.body;
+
+  try {
+    const response = await admin.messaging().sendMulticast({
+      notification: {
+        title: titulo || '🚨 Alerta',
+        body: mensaje || 'Nueva alerta'
+      },
+      tokens: tokens || []
+    });
+
+    res.json({
+      success: true,
+      enviados: response.successCount,
+      fallidos: response.failureCount
+    });
+
   } catch (error) {
-    console.error("❌ Error enviando notificación:", error);
-    res.status(500).send("Error enviando notificación");
+    console.error('❌ Error enviando alerta:', error);
+    res.status(500).json({ error: 'Error enviando alerta' });
   }
 });
 
-// 🌍 Puerto dinámico para Render
+// 🌐 Ruta principal (ESTO ARREGLA TU PROBLEMA)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// 🚀 Puerto
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
