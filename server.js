@@ -6,9 +6,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 🔥 FIREBASE (DESDE VARIABLE DE ENTORNO)
+// 🔥 FIREBASE (USANDO TU VARIABLE CORRECTA)
 try {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_CONFIG);
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -23,7 +23,7 @@ try {
 // 📦 SERVIR FRONTEND
 app.use(express.static("public"));
 
-// 🧠 MEMORIA DE ALERTA (simple)
+// 🧠 MEMORIA SIMPLE
 let ultimaAlerta = null;
 
 // 🚨 RECIBIR ALERTA
@@ -45,7 +45,7 @@ app.get("/test", (req, res) => {
   res.send("🚨 Servidor Villa Segura funcionando");
 });
 
-// 🚀 START SERVER
+// 🚀 START
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🚀 Servidor corriendo en puerto " + PORT);
